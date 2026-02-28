@@ -1,0 +1,13 @@
+{
+  "name": "catsense",
+  "private": true,
+  "packageManager": "pnpm@9.0.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:worker": "pnpm --filter worker dev",
+    "deploy:worker": "pnpm --filter worker deploy"
+  }
+}

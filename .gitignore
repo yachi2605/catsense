@@ -1,0 +1,47 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.secret
+*.secrets
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*credentials*
+
+# Cloudflare / worker local vars
+.dev.vars
+.wrangler/
+
+# Dependencies and caches
+node_modules/
+.pnpm-store/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Build / temp outputs
+dist/
+build/
+coverage/
+.cache/
+tmp/
+temp/
