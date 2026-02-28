@@ -1,0 +1,14 @@
+name = "catsense-worker"
+main = "src/index.ts"
+compatibility_date = "2026-02-28"
+
+[vars]
+# non-secret config goes here
+MAX_UPLOAD_MB = "15"
+GEMINI_MODEL = "gemini-2.0-flash"
+# Set ACTIAN_QUERY_URL in your local/dev vars or dashboard if this differs by environment.
+# Keep API keys as secrets (GEMINI_API_KEY, ACTIAN_API_KEY).
+
+[[r2_buckets]]
+binding = "UPLOADS"
+bucket_name = "catsense-uploads"
