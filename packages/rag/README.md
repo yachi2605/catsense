@@ -8,6 +8,7 @@ RAG backend for the Worker `POST /api/inspect` flow.
 2. Creates embeddings for chunks.
 3. Stores chunks + vectors in `manual_chunks`.
 4. Serves `POST /query` to retrieve relevant excerpts by `equipment_id`.
+5. Stores and serves inspection report history in `inspection_reports`.
 
 ## 2) Prerequisites
 
@@ -30,15 +31,19 @@ ACTIAN_DSN=postgresql://user:password@host:5432/database
 GEMINI_API_KEY=your_gemini_key
 ACTIAN_QUERY_API_KEY=optional
 EMBEDDING_MODEL=gemini-embedding-001
+EMBEDDING_DIM=3072
 HOST=0.0.0.0
 PORT=8000
 TOP_K_DEFAULT=5
 MAX_EXCERPT_CHARS=500
+AUTO_INIT_SCHEMA=1
 ```
 
 Notes:
 - `ACTIAN_DSN` is required.
 - `ACTIAN_QUERY_API_KEY` is optional. If set, clients must send `x-api-key`.
+- Keep `EMBEDDING_DIM` aligned with your `manual_chunks.embedding vector(...)` schema.
+- `AUTO_INIT_SCHEMA=1` lets the service run `infra/actian/schema.sql` on startup.
 
 ## 4) Optional local database (Docker)
 
@@ -94,6 +99,8 @@ What this does:
 - Embeds chunks.
 - Upserts chunks to the vector table.
 
+Schema also includes `inspection_reports` used by the Worker to persist submitted/analyzed inspections.
+
 ## 7) Run API server
 
 ```bash
@@ -112,6 +119,32 @@ Query endpoint test:
 curl -X POST http://127.0.0.1:8000/query \
   -H "content-type: application/json" \
   -d '{"equipment_id":"EQ-1234","limit":5}'
+```
+
+Inspection report upsert test:
+
+```bash
+curl -X POST http://127.0.0.1:8000/inspection-reports \
+  -H "content-type: application/json" \
+  -d '{
+    "session_id":"demo-session-1",
+    "equipment_id":"EQ-1234",
+    "checklist_id":"cat-excavator-safety-v1",
+    "inspector_id":"officer-01",
+    "submitted_at":"2026-02-28T12:00:00Z",
+    "summary":{"total_items_with_status":9,"pass_count":8,"fail_count":1,"na_count":0},
+    "overall_status":"needs_attention",
+    "analyzed_checks":3,
+    "evidence_count":5,
+    "manual_excerpts_count":5,
+    "report":{"note":"demo"}
+  }'
+```
+
+Inspection report history test:
+
+```bash
+curl "http://127.0.0.1:8000/inspection-reports/EQ-1234?limit=20"
 ```
 
 If API key is enabled:

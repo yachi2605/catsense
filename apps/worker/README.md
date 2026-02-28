@@ -1,6 +1,14 @@
 # Worker Service (`apps/worker`)
 
-Cloudflare Worker API for `POST /api/inspect`.
+Cloudflare Worker API for:
+- `POST /api/inspect` (single-shot)
+- `POST /api/inspection-sessions` (create session)
+- `POST /api/inspection-sessions/:session_id/evidence` (upload image/audio per check; supports `audio/webm`)
+- `POST /api/inspection-sessions/:session_id/items/:check_id` (upsert item status/remarks)
+- `POST /api/inspection-sessions/:session_id/analyze` (analyze all checks)
+- `POST /api/inspection-sessions/:session_id/submit` (finalize inspection summary)
+- `GET /api/inspection-sessions/:session_id` (session status)
+- `GET /api/inspection-reports/:equipment_id?limit=20` (inspection history from DB)
 
 ## 1) Prerequisites
 
@@ -18,15 +26,17 @@ Create `apps/worker/.dev.vars` with these values:
 
 ```env
 GEMINI_API_KEY=your_gemini_key
-GEMINI_MODEL=gemini-2.0-flash
+GEMINI_MODEL=gemini-2.5-flash
 MAX_UPLOAD_MB=15
 ACTIAN_QUERY_URL=http://127.0.0.1:8000/query
+ACTIAN_REPORT_URL=http://127.0.0.1:8000/inspection-reports
 ACTIAN_API_KEY=optional_if_rag_api_has_key
 ```
 
 Notes:
 - `GEMINI_API_KEY` and `ACTIAN_API_KEY` are secrets.
 - `ACTIAN_QUERY_URL` must point to your running RAG API.
+- `ACTIAN_REPORT_URL` is optional; if omitted the worker derives it from `ACTIAN_QUERY_URL`.
 
 ## 3) Run locally
 
@@ -49,13 +59,79 @@ Use multipart form with `equipment_id`, `image`, `audio`:
 ```bash
 curl -X POST http://127.0.0.1:8787/api/inspect \
   -F "equipment_id=EQ-1234" \
-  -F "image=@/absolute/path/photo.jpg" \
-  -F "audio=@/absolute/path/voice.wav"
+  -F "image=@test/HydraulicFluidTank.jpg;type=image/jpeg" \
+  -F "audio=@test/fluid.wav;type=audio/wav"
 ```
 
 Expected behavior:
 - Returns JSON with `equipment_id`, uploaded object keys, and `analysis`.
 - Returns `400` if files/types/required fields are invalid.
+
+### Session-based flow (multi-photo + multi-audio)
+
+1. Create session:
+
+```bash
+curl -X POST http://127.0.0.1:8787/api/inspection-sessions \
+  -H "content-type: application/json" \
+  -d '{"equipment_id":"EQ-1234","checklist_id":"safety-v1","inspector_id":"officer-01"}'
+```
+
+2. Upload evidence for a check (`file` can be image or audio):
+
+```bash
+curl -X POST http://127.0.0.1:8787/api/inspection-sessions/<SESSION_ID>/evidence \
+  -F "check_id=fluid_level" \
+  -F "label=tank_sight_glass_closeup" \
+  -F "file=@test/HydraulicFluidTank.jpg;type=image/jpeg"
+```
+
+```bash
+curl -X POST http://127.0.0.1:8787/api/inspection-sessions/<SESSION_ID>/evidence \
+  -F "check_id=fluid_level" \
+  -F "label=pump_audio_idle" \
+  -F "file=@test/fluid.wav;type=audio/wav"
+```
+
+3. Analyze session:
+
+```bash
+curl -X POST http://127.0.0.1:8787/api/inspection-sessions/<SESSION_ID>/analyze
+```
+
+4. Get session status:
+
+```bash
+curl http://127.0.0.1:8787/api/inspection-sessions/<SESSION_ID>
+```
+
+5. Save item status/text remarks (maps to `statuses` + `textRemarks` in your frontend):
+
+```bash
+curl -X POST http://127.0.0.1:8787/api/inspection-sessions/<SESSION_ID>/items/fluid_level \
+  -H "content-type: application/json" \
+  -d '{"status":"fail","text_remark":"Leak near lower hose clamp."}'
+```
+
+6. Save audio duration metadata for the same item:
+
+```bash
+curl -X POST http://127.0.0.1:8787/api/inspection-sessions/<SESSION_ID>/items/fluid_level \
+  -H "content-type: application/json" \
+  -d '{"audio_duration_sec":18}'
+```
+
+7. Submit inspection:
+
+```bash
+curl -X POST http://127.0.0.1:8787/api/inspection-sessions/<SESSION_ID>/submit
+```
+
+8. Get historical reports for the machine:
+
+```bash
+curl http://127.0.0.1:8787/api/inspection-reports/EQ-1234?limit=20
+```
 
 ## 5) Deploy
 
