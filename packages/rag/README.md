@@ -29,7 +29,7 @@ Set required values in `.env`:
 ACTIAN_DSN=postgresql://user:password@host:5432/database
 GEMINI_API_KEY=your_gemini_key
 ACTIAN_QUERY_API_KEY=optional
-EMBEDDING_MODEL=models/text-embedding-004
+EMBEDDING_MODEL=gemini-embedding-001
 HOST=0.0.0.0
 PORT=8000
 TOP_K_DEFAULT=5
