@@ -1,5 +1,4 @@
 import { z } from "zod";
-
 export const inspectOutputSchema = z.object({
   summary: z.string().min(1),
   status: z.enum(["ok", "needs_attention", "critical"]),

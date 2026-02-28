@@ -1,8 +1,8 @@
 import { queryActianManualExcerpts } from "../services/actian";
-import { runGeminiInspection } from "../services/gemini";
 import { uploadFileToR2 } from "../services/r2";
-import { buildInspectPrompt } from "../prompts/inspectPrompt";
 import { getRequiredFile, getRequiredString } from "../utils/formData";
+import { buildEvidencePrompt, buildInspectionReport } from "../modelling";
+import { runGeminiEvidenceExtraction } from "../services/geminiEvidence";
 
 interface Env {
   MAX_UPLOAD_MB?: string;
@@ -57,20 +57,24 @@ export async function handleInspect(request: Request, env: Env): Promise<Respons
     limit: 5,
   });
 
-  const prompt = buildInspectPrompt({
-    equipmentId,
-    manualExcerpts,
-  });
+  const imageDescription = "N/A (Gemini inspects the image directly)";
+  const audioTranscript = "";
 
-  const analysis = await runGeminiInspection({
+  const evidencePrompt =
+    buildEvidencePrompt(imageDescription, audioTranscript) +
+    "\n\nManual excerpts:\n" +
+    manualExcerpts.map((excerpt) => `- ${excerpt}`).join("\n");
+
+  const evidence = await runGeminiEvidenceExtraction({
     config: {
       apiKey: env.GEMINI_API_KEY,
       model: env.GEMINI_MODEL ?? "gemini-2.0-flash",
     },
-    prompt,
+    prompt: evidencePrompt,
     image,
-    audio,
+    audioTranscript,
   });
+  const report = buildInspectionReport(evidence);
 
   return jsonResponse(
     {
@@ -80,7 +84,8 @@ export async function handleInspect(request: Request, env: Env): Promise<Respons
         audio_key: audioUpload.key,
       },
       manual_excerpts_count: manualExcerpts.length,
-      analysis,
+      evidence,
+      report,
     },
     200,
   );
