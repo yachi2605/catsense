@@ -9,10 +9,29 @@ interface GeminiConfig {
 export async function runGeminiInspection(input: {
   config: GeminiConfig;
   prompt: string;
-  image: File;
-  audio: File;
+  images: File[];
+  audios: File[];
 }): Promise<InspectOutput> {
+  if (input.images.length === 0) {
+    throw new Error("Missing required field: image evidence");
+  }
+
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${input.config.model}:generateContent?key=${input.config.apiKey}`;
+
+  const mediaParts = [
+    ...input.images.map(async (image) => ({
+      inlineData: {
+        mimeType: image.type,
+        data: arrayBufferToBase64(await image.arrayBuffer()),
+      },
+    })),
+    ...input.audios.map(async (audio) => ({
+      inlineData: {
+        mimeType: audio.type,
+        data: arrayBufferToBase64(await audio.arrayBuffer()),
+      },
+    })),
+  ];
 
   const response = await fetch(endpoint, {
     method: "POST",
@@ -23,21 +42,7 @@ export async function runGeminiInspection(input: {
       contents: [
         {
           role: "user",
-          parts: [
-            { text: input.prompt },
-            {
-              inlineData: {
-                mimeType: input.image.type,
-                data: arrayBufferToBase64(await input.image.arrayBuffer()),
-              },
-            },
-            {
-              inlineData: {
-                mimeType: input.audio.type,
-                data: arrayBufferToBase64(await input.audio.arrayBuffer()),
-              },
-            },
-          ],
+          parts: [{ text: input.prompt }, ...(await Promise.all(mediaParts))],
         },
       ],
       generationConfig: {

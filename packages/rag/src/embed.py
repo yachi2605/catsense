@@ -15,6 +15,8 @@ _FALLBACK_MODELS: Final[tuple[str, ...]] = ("gemini-embedding-001", "text-embedd
 def embed_text(text: str, *, model: str | None = None, api_key: str | None = None, fallback_dim: int = 768) -> list[float]:
     model_name = _normalize_gemini_model(model or os.getenv("EMBEDDING_MODEL", "text-embedding-004"))
     gemini_key = api_key or os.getenv("GEMINI_API_KEY")
+    expected_dim = _embedding_dim_or_none()
+    target_dim = expected_dim or fallback_dim
 
     if gemini_key:
         candidates = _candidate_models(model_name)
@@ -22,7 +24,11 @@ def embed_text(text: str, *, model: str | None = None, api_key: str | None = Non
 
         for candidate in candidates:
             try:
-                return _embed_with_gemini(text, candidate, gemini_key)
+                values = _embed_with_gemini(text, candidate, gemini_key)
+                if expected_dim and len(values) != expected_dim:
+                    errors.append(f"{candidate} -> dim {len(values)} != expected {expected_dim}")
+                    continue
+                return values
             except requests.HTTPError as exc:
                 status = getattr(exc.response, "status_code", "unknown")
                 errors.append(f"{candidate} -> HTTP {status}")
@@ -34,7 +40,7 @@ def embed_text(text: str, *, model: str | None = None, api_key: str | None = Non
             f"Tried: {', '.join(errors)}"
         )
 
-    return _embed_with_hash(text, fallback_dim)
+    return _embed_with_hash(text, target_dim)
 
 
 def _embed_with_gemini(text: str, model: str, api_key: str) -> list[float]:
@@ -72,6 +78,21 @@ def _candidate_models(primary: str) -> list[str]:
 
 def _warn(message: str) -> None:
     print(f"[embed] {message}", file=sys.stderr)
+
+
+def _embedding_dim_or_none() -> int | None:
+    raw = os.getenv("EMBEDDING_DIM", "").strip()
+    if not raw:
+        return None
+    try:
+        value = int(raw)
+    except ValueError:
+        _warn(f"Invalid EMBEDDING_DIM={raw!r}; ignoring.")
+        return None
+    if value <= 0:
+        _warn(f"Invalid EMBEDDING_DIM={raw!r}; must be > 0. Ignoring.")
+        return None
+    return value
 
 
 def _embed_with_hash(text: str, dim: int) -> list[float]:

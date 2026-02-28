@@ -36,6 +36,8 @@ function extensionFromMimeType(mimeType: string): string {
     case "audio/wav":
     case "audio/x-wav":
       return "wav";
+    case "audio/webm":
+      return "webm";
     default:
       return "bin";
   }

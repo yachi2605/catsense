@@ -14,7 +14,7 @@ interface Env {
 }
 
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png"]);
-const ALLOWED_AUDIO_TYPES = new Set(["audio/wav", "audio/x-wav", "audio/mpeg", "audio/mp3"]);
+const ALLOWED_AUDIO_TYPES = new Set(["audio/wav", "audio/x-wav", "audio/mpeg", "audio/mp3", "audio/webm"]);
 
 export async function handleInspect(request: Request, env: Env): Promise<Response> {
   const contentType = request.headers.get("content-type") ?? "";
@@ -68,11 +68,11 @@ export async function handleInspect(request: Request, env: Env): Promise<Respons
   const evidence = await runGeminiEvidenceExtraction({
     config: {
       apiKey: env.GEMINI_API_KEY,
-      model: env.GEMINI_MODEL ?? "gemini-2.0-flash",
+      model: env.GEMINI_MODEL ?? "gemini-2.5-flash",
     },
-    prompt: evidencePrompt,
-    image,
-    audioTranscript,
+    prompt,
+    images: [image],
+    audios: [audio],
   });
   const report = buildInspectionReport(evidence);
 
