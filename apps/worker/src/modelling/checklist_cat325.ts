@@ -6,29 +6,27 @@ export const CAT325_CHECKLIST = [
     section: "FROM_THE_GROUND",
     item: "Bucket, GET",
     looking_for: [
-      "excessive wear",
-      "damage",
+      "excessive wear or damage",
       "cracks"
     ]
   },
   {
     section: "FROM_THE_GROUND",
-    item: "Bucket Cylinder & Linkage",
+    item: "Hydraulic Oil",
     looking_for: [
-      "excessive wear",
+      "fluid level",
       "damage",
-      "leaks",
-      "needs lubrication"
+      "leaks"
     ]
   },
   {
     section: "FROM_THE_GROUND",
-    item: "Stick, Cylinder",
+    item: "Sticks",
     looking_for: [
       "wear",
       "damage",
       "leaks",
-      "needs lubrication"
+      "lubricate"
     ]
   },
 
@@ -37,26 +35,18 @@ export const CAT325_CHECKLIST = [
   // =========================
   {
     section: "ENGINE_COMPARTMENT",
-    item: "Engine Oil",
+    item: "All Hoses",
     looking_for: [
-      "fluid level low",
+      "cracks",
+      "wear spots",
       "leaks"
     ]
   },
   {
     section: "ENGINE_COMPARTMENT",
-    item: "Swing Gear Oil",
+    item: "Overall Engine",
     looking_for: [
-      "fluid level low",
-      "leaks"
-    ]
-  },
-  {
-    section: "ENGINE_COMPARTMENT",
-    item: "Fuel Tank",
-    looking_for: [
-      "fuel level low",
-      "damage",
+      "trash or dirt buildup",
       "leaks"
     ]
   },
@@ -66,29 +56,26 @@ export const CAT325_CHECKLIST = [
   // =========================
   {
     section: "INSIDE_CAB",
+    item: "Controls",
+    looking_for: [
+      "horn working",
+      "travel alarm working if equipped",
+      "all warning devices working properly"
+    ]
+  },
+  {
+    section: "INSIDE_CAB",
+    item: "Master Switch",
+    looking_for: [
+      "correct operation"
+    ]
+  },
+  {
+    section: "INSIDE_CAB",
     item: "Seat",
     looking_for: [
-      "adjustment issue",
-      "unable to reach pedals",
-      "damage"
-    ]
-  },
-  {
-    section: "INSIDE_CAB",
-    item: "Seat Belt & Mounting",
-    looking_for: [
-      "damage",
-      "wear",
-      "improper latch",
-      "expired"
-    ]
-  },
-  {
-    section: "INSIDE_CAB",
-    item: "Horn, Travel Alarm, Lights",
-    looking_for: [
-      "not functioning",
-      "warning device failure"
+      "adjustment",
+      "able to reach pedals"
     ]
   }
 ];

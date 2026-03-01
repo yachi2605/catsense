@@ -1,5 +1,11 @@
 import { CAT325_CHECKLIST } from "./checklist_cat325";
 
+const CHECKLIST_SECTION_BY_PREFIX: Record<string, string> = {
+  g: "FROM_THE_GROUND",
+  e: "ENGINE_COMPARTMENT",
+  c: "INSIDE_CAB",
+};
+
 export function buildStructuredInspectionPrompt(input: {
   checkId: string;
   manualExcerpts: string[];
@@ -50,19 +56,11 @@ export function buildStructuredInspectionPrompt(input: {
 function resolveChecklistContext(checkId: string): { item: string; lookingFor: string } {
   const sectionPrefix = checkId.charAt(0).toLowerCase();
   const numericPart = Number.parseInt(checkId.slice(1), 10);
-
-  const sectionOffsets: Record<string, number> = {
-    g: 0,
-    e: 3,
-    c: 6,
-  };
-
-  const sectionOffset = sectionOffsets[sectionPrefix];
-  const index =
-    typeof sectionOffset === "number" && Number.isFinite(numericPart) && numericPart > 0
-      ? sectionOffset + (numericPart - 1)
-      : -1;
-  const entry = index >= 0 ? CAT325_CHECKLIST[index] : undefined;
+  const section = CHECKLIST_SECTION_BY_PREFIX[sectionPrefix];
+  const entry =
+    section && Number.isFinite(numericPart) && numericPart > 0
+      ? CAT325_CHECKLIST.filter((item) => item.section === section)[numericPart - 1]
+      : undefined;
 
   if (!entry) {
     return {

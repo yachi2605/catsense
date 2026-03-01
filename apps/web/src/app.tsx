@@ -13,9 +13,21 @@ const WORKER_URL =
 
 /* ═══════════════════════ DATA ═══════════════════════ */
 const MACHINES = [
-  { id: "m1", model: "CAT 320", serial: "ZAR00512", hours: 575.3 },
-  { id: "m2", model: "CAT 336", serial: "DKS01847", hours: 1203.7 },
-  { id: "m3", model: "CAT 352", serial: "FMG02291", hours: 342.1 },
+  {
+    id: "m1", model: "CAT 320", serial: "ZAR00512", hours: 575.3,
+    photo: "/cat320.jpeg",
+    engine: "Cat C4.4", weight: "20 t", depth: "6.7 m",
+  },
+  {
+    id: "m2", model: "CAT 834K", serial: "DKS01847", hours: 1203.7,
+    photo: "/834k.jpg",
+    engine: "Cat C18", weight: "65 t", depth: "—",
+  },
+  {
+    id: "m3", model: "CAT 236D3", serial: "FMG02291", hours: 342.1,
+    photo: "/236D3.jpg",
+    engine: "Cat C3.8", weight: "3.8 t", depth: "—",
+  },
 ];
 
 const SECTIONS = [
@@ -27,8 +39,8 @@ const SECTIONS = [
     emoji: "🔍",
     items: [
       { id: "g1", name: "Bucket, GET", lookFor: "Excessive wear or damage, cracks" },
-      { id: "g2", name: "Bucket Cylinder & Linkage", lookFor: "Excessive wear, damage, leaks, lubricate" },
-      { id: "g3", name: "Stick, Cylinder", lookFor: "Wear, damage, leaks, lubricate" },
+      { id: "g2", name: "Hydraulic Oil", lookFor: "Fluid level, damage, leaks" },
+      { id: "g3", name: "Sticks", lookFor: "Wear, damage, leaks, lubricate" },
       { id: "g4", name: "Boom, Cylinders", lookFor: "Wear, damage, leaks, lubricate" },
       { id: "g5", name: "Underneath of Machine", lookFor: "Final drive leaks, swing drive leaks, damage" },
       { id: "g6", name: "Carbody", lookFor: "Cracks, damage" },
@@ -59,13 +71,13 @@ const SECTIONS = [
     description: "Engine bay, platforms & fluid level checks",
     emoji: "⚙️",
     items: [
-      { id: "e1", name: "Engine Oil", lookFor: "Fluid level" },
-      { id: "e2", name: "Swing Gear Oil", lookFor: "Fluid level, leaks" },
-      { id: "e3", name: "Fuel Tank", lookFor: "Fuel level, damage, leaks" },
-      { id: "e4", name: "DEF Tank (if equipped)", lookFor: "Fluid level, check for debris buildup" },
-      { id: "e5", name: "All Hoses", lookFor: "Cracks, wear spots, leaks" },
-      { id: "e6", name: "All Belts", lookFor: "Tightness, wear, cracks" },
-      { id: "e7", name: "Overall Engine Compartment", lookFor: "Trash or dirt buildup, leaks" },
+      { id: "e1", name: "All Hoses", lookFor: "Cracks, wear spots, leaks" },
+      { id: "e2", name: "Overall Engine", lookFor: "Trash or dirt buildup, leaks" },
+      { id: "e3", name: "Engine Oil", lookFor: "Fluid level" },
+      { id: "e4", name: "Swing Gear Oil", lookFor: "Fluid level, leaks" },
+      { id: "e5", name: "Fuel Tank", lookFor: "Fuel level, damage, leaks" },
+      { id: "e6", name: "DEF Tank (if equipped)", lookFor: "Fluid level, check for debris buildup" },
+      { id: "e7", name: "All Belts", lookFor: "Tightness, wear, cracks" },
     ],
   },
   {
@@ -75,9 +87,13 @@ const SECTIONS = [
     description: "Cabin controls, safety systems & operator comfort",
     emoji: "🪟",
     items: [
-      { id: "c1", name: "Seat", lookFor: "Adjustment, able to reach pedals" },
-      { id: "c2", name: "Seat Belt & Mounting", lookFor: "Damage, wear, adjustment, installed date, age" },
-      { id: "c3", name: "Horn, Travel Alarm, Lights", lookFor: "Proper function of all warning devices" },
+      {
+        id: "c1",
+        name: "Controls",
+        lookFor: "Make sure horn, travel alarm (if equipped), and all other warning devices are working properly",
+      },
+      { id: "c2", name: "Master Switch", lookFor: "Correct operation" },
+      { id: "c3", name: "Seat", lookFor: "Adjustment, able to reach pedals" },
       { id: "c4", name: "Indicators", lookFor: "Proper function" },
       { id: "c5", name: "Monitor Panel", lookFor: "Proper function" },
       { id: "c6", name: "Switches", lookFor: "Proper function" },
@@ -91,10 +107,14 @@ const SECTIONS = [
   },
 ];
 
-const DEMO_ITEMS_PER_SECTION = 3;
+const DEMO_ITEMS_PER_SECTION: Record<string, number> = {
+  ground: 3,
+  engine: 2,
+  cab: 3,
+};
 const ACTIVE_SECTIONS = SECTIONS.map((section) => ({
   ...section,
-  items: section.items.slice(0, DEMO_ITEMS_PER_SECTION),
+  items: section.items.slice(0, DEMO_ITEMS_PER_SECTION[section.key] ?? 3),
 }));
 
 function hasAnyInput(
@@ -111,6 +131,203 @@ function isUnknownLike(value: unknown): boolean {
 }
 
 /* ═══════════════════════ SVG ICONS ═══════════════════════ */
+
+function RadialProgress({ value, size = 72, stroke = 7 }: { value: number; size?: number; stroke?: number }) {
+  const pct = Math.round(Math.max(0, Math.min(1, value)) * 100);
+  const r = (size - stroke) / 2;
+  const circ = 2 * Math.PI * r;
+  const offset = circ - (pct / 100) * circ;
+  const color = pct >= 75 ? "#16a34a" : pct >= 45 ? "#f59e0b" : "#dc2626";
+  const trackColor = pct >= 75 ? "#dcfce7" : pct >= 45 ? "#fef3c7" : "#fee2e2";
+  return (
+    <svg width={size} height={size} style={{ display: "block" }}>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={trackColor} strokeWidth={stroke} />
+      <circle
+        cx={size / 2} cy={size / 2} r={r}
+        fill="none" stroke={color} strokeWidth={stroke}
+        strokeLinecap="round"
+        strokeDasharray={circ}
+        strokeDashoffset={offset}
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        style={{ transition: "stroke-dashoffset 0.5s ease" }}
+      />
+      <text x={size / 2} y={size / 2 - 1} textAnchor="middle" dominantBaseline="central" fontSize={size * 0.22} fontWeight="800" fill={color}>{pct}%</text>
+    </svg>
+  );
+}
+
+/* ═══════════════════════ CATERPILLAR LOGO ═══════════════════════ */
+function CaterpillarLogo({ dark = false }: { dark?: boolean }) {
+  return (
+    <svg height="38" viewBox="0 0 230 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Yellow CAT badge */}
+      <rect x="0" y="0" width="60" height="38" rx="3" fill="#FFCB05" />
+      {/* CAT letterforms — bold condensed */}
+      <text x="30" y="28" textAnchor="middle" fill="#000"
+        fontSize="24" fontWeight="900" fontFamily="'Arial Black', 'Impact', Arial, sans-serif"
+        letterSpacing="-0.5">CAT</text>
+      {/* Vertical rule */}
+      <rect x="70" y="6" width="1.5" height="26" fill={dark ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.2)"} />
+      {/* CATERPILLAR wordmark */}
+      <text x="80" y="17" fill={dark ? "#000" : "#FFCB05"}
+        fontSize="11" fontWeight="800" fontFamily="Arial, sans-serif" letterSpacing="3.5">CATERPILLAR</text>
+      {/* Sub-line */}
+      <text x="80" y="32" fill={dark ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.45)"}
+        fontSize="8.5" fontWeight="600" fontFamily="Arial, sans-serif" letterSpacing="2.5">SAFETY INSPECTION</text>
+    </svg>
+  );
+}
+
+/* ═══════════════════════ GLOBAL STYLES ═══════════════════════ */
+function useGlobalStyles() {
+  useEffect(() => {
+    const id = "catsense-global-styles";
+    if (document.getElementById(id)) return;
+    const el = document.createElement("style");
+    el.id = id;
+    el.textContent = `
+      *, *::before, *::after { box-sizing: border-box; }
+      @keyframes floatY {
+        0%,100% { transform: translateY(0px); }
+        50%      { transform: translateY(-12px); }
+      }
+      @keyframes floatSlow {
+        0%,100% { transform: translateY(0px) rotate(0deg); }
+        33%      { transform: translateY(-7px) rotate(1.5deg); }
+        66%      { transform: translateY(5px) rotate(-1deg); }
+      }
+      @keyframes catGlow {
+        0%,100% { box-shadow: 0 0 20px rgba(255,203,5,0.4), 0 0 40px rgba(255,203,5,0.15); }
+        50%      { box-shadow: 0 0 50px rgba(255,203,5,0.75), 0 0 90px rgba(255,203,5,0.3); }
+      }
+      @keyframes fadeInUp {
+        from { opacity:0; transform:translateY(28px); }
+        to   { opacity:1; transform:translateY(0); }
+      }
+      @keyframes fadeIn {
+        from { opacity:0; }
+        to   { opacity:1; }
+      }
+      @keyframes spinSlow {
+        from { transform:rotate(0deg); }
+        to   { transform:rotate(360deg); }
+      }
+      @keyframes spinSlowReverse {
+        from { transform:rotate(0deg); }
+        to   { transform:rotate(-360deg); }
+      }
+      @keyframes pulseDot {
+        0%,100% { transform:scale(1); opacity:1; }
+        50%      { transform:scale(1.6); opacity:0.5; }
+      }
+      @keyframes scanLine {
+        0%   { top:0%; opacity:0.7; }
+        100% { top:100%; opacity:0; }
+      }
+      @keyframes shimmer {
+        0%   { background-position:-200% center; }
+        100% { background-position:200% center; }
+      }
+      @keyframes trackScroll {
+        from { stroke-dashoffset:0; }
+        to   { stroke-dashoffset:-32; }
+      }
+      @keyframes blink {
+        0%,100% { opacity:1; }
+        50%      { opacity:0.3; }
+      }
+      .cat-tilt-card {
+        transition: transform 0.45s cubic-bezier(.25,.46,.45,.94);
+        transform-style: preserve-3d;
+        will-change: transform;
+      }
+      .shimmer-text {
+        background: linear-gradient(90deg, #FFCB05 0%, #fff 45%, #FFCB05 55%, #FFCB05 100%);
+        background-size: 200% auto;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: shimmer 3s linear infinite;
+      }
+      .glass {
+        background: rgba(255,255,255,0.07);
+        backdrop-filter: blur(18px) saturate(180%);
+        -webkit-backdrop-filter: blur(18px) saturate(180%);
+        border: 1px solid rgba(255,255,255,0.13);
+      }
+      .glass-light {
+        background: rgba(255,255,255,0.55);
+        backdrop-filter: blur(14px) saturate(160%);
+        -webkit-backdrop-filter: blur(14px) saturate(160%);
+        border: 1px solid rgba(255,255,255,0.6);
+      }
+    `;
+    document.head.appendChild(el);
+  }, []);
+}
+
+/* ═══════════════════════ 3D TILT CARD ═══════════════════════ */
+function TiltCard({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const onMove = (e: React.MouseEvent) => {
+    const el = ref.current; if (!el) return;
+    const r = el.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width - 0.5;
+    const y = (e.clientY - r.top) / r.height - 0.5;
+    el.style.transition = "transform 0.08s ease";
+    el.style.transform = `perspective(900px) rotateX(${-y * 14}deg) rotateY(${x * 14}deg) translateZ(8px)`;
+  };
+  const onLeave = () => {
+    const el = ref.current; if (!el) return;
+    el.style.transition = "transform 0.5s cubic-bezier(.25,.46,.45,.94)";
+    el.style.transform = "perspective(900px) rotateX(0) rotateY(0) translateZ(0)";
+  };
+  return (
+    <div ref={ref} className="cat-tilt-card" style={style} onMouseMove={onMove} onMouseLeave={onLeave}>
+      {children}
+    </div>
+  );
+}
+
+/* ═══════════════════════ PARTICLE CANVAS ═══════════════════════ */
+function ParticleCanvas() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = canvasRef.current; if (!canvas) return;
+    const ctx = canvas.getContext("2d")!;
+    let raf: number;
+    const resize = () => { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; };
+    resize();
+    window.addEventListener("resize", resize);
+    const particles = Array.from({ length: 55 }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 1.8 + 0.3,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: -Math.random() * 0.5 - 0.1,
+      alpha: Math.random() * 0.5 + 0.1,
+      color: Math.random() > 0.6 ? "255,203,5" : "148,163,184",
+    }));
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach((p) => {
+        p.x += p.vx; p.y += p.vy;
+        if (p.y < -4) { p.y = canvas.height + 4; p.x = Math.random() * canvas.width; }
+        if (p.x < -4) p.x = canvas.width + 4;
+        if (p.x > canvas.width + 4) p.x = -4;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${p.color},${p.alpha})`;
+        ctx.fill();
+      });
+      raf = requestAnimationFrame(draw);
+    };
+    draw();
+    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", resize); };
+  }, []);
+  return <canvas ref={canvasRef} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }} />;
+}
+
 const ArrowLeft = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
@@ -136,31 +353,108 @@ const ChevronDown = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2" strokeLinecap="round"><polyline points="6 9 12 15 18 9" /></svg>
 );
 
-/* ═══════════════ EXCAVATOR SVG ═══════════════ */
+/* ═══════════════ ANIMATED EXCAVATOR SVG ═══════════════ */
 function ExcavatorSVG({ width = 180 }: { width?: number }) {
+  const [t, setT] = useState(0);
+  const rafRef = useRef<number>();
+  useEffect(() => {
+    const loop = () => { setT(Date.now() / 1000); rafRef.current = requestAnimationFrame(loop); };
+    rafRef.current = requestAnimationFrame(loop);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, []);
+
+  const W = 200, H = 140;
+  // Arm kinematics — all in viewBox coords
+  const pivotX = 90, pivotY = 62;
+  const boomLen = 58, stickLen = 44, bucketLen = 18;
+  const boomBase = -2.15 + Math.sin(t * 0.45) * 0.14;
+  const stickRel  = 1.05 + Math.sin(t * 0.65 + 1.2) * 0.18;
+  const bucketRel = 0.9  + Math.sin(t * 0.85 + 2.4) * 0.26;
+  const bA = boomBase;
+  const sA = bA + stickRel;
+  const buA = sA + bucketRel;
+  const bEx = pivotX + Math.cos(bA) * boomLen;
+  const bEy = pivotY + Math.sin(bA) * boomLen;
+  const sEx = bEx   + Math.cos(sA) * stickLen;
+  const sEy = bEy   + Math.sin(sA) * stickLen;
+  const buTx = sEx  + Math.cos(buA) * bucketLen;
+  const buTy = sEy  + Math.sin(buA) * bucketLen;
+  // Bucket scoop shape
+  const buNx = sEx + Math.cos(buA + 0.7) * (bucketLen * 0.7);
+  const buNy = sEy + Math.sin(buA + 0.7) * (bucketLen * 0.7);
+
+  const trackDash = ((t * 28) % 32).toFixed(1);
+
   return (
-    <svg width={width} height={width * 0.7} viewBox="0 0 200 140" fill="none">
-      <rect x="30" y="100" width="140" height="28" rx="14" fill="#2d2d2d" />
-      <rect x="34" y="104" width="132" height="20" rx="10" fill="#1a1a1a" />
-      {[44, 60, 76, 92, 108, 124, 140, 156].map((x, i) => (
-        <circle key={i} cx={x} cy="114" r="6" fill="#2d2d2d" stroke="#444" strokeWidth="1" />
+    <svg width={width} height={width * (H / W)} viewBox={`0 0 ${W} ${H}`} fill="none">
+      {/* Shadow */}
+      <ellipse cx="100" cy="134" rx="68" ry="5" fill="rgba(0,0,0,0.18)" />
+
+      {/* Track assembly */}
+      <rect x="28" y="98" width="148" height="30" rx="15" fill="#1c1c1c" />
+      <rect x="32" y="102" width="140" height="22" rx="11" fill="#111" />
+      {[42, 61, 80, 99, 118, 137, 156].map((x, i) => (
+        <circle key={i} cx={x} cy="113" r="7.5" fill="#1c1c1c" stroke="#383838" strokeWidth="1.5" />
       ))}
-      <rect x="45" y="62" width="110" height="40" rx="6" fill="#FFCB05" />
-      <rect x="48" y="65" width="104" height="34" rx="4" fill="#E8B800" />
-      <rect x="100" y="42" width="48" height="38" rx="4" fill="#FFCB05" stroke="#D4A017" strokeWidth="1" />
-      <rect x="104" y="46" width="40" height="24" rx="3" fill="#87CEEB" opacity="0.6" />
-      <rect x="104" y="46" width="40" height="24" rx="3" stroke="#999" strokeWidth="0.5" />
-      <path d="M95 60L55 25L30 50" stroke="#FFCB05" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M95 60L55 25L30 50" stroke="#D4A017" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M30 50L15 80" stroke="#FFCB05" strokeWidth="6" strokeLinecap="round" />
-      <path d="M30 50L15 80" stroke="#D4A017" strokeWidth="4" strokeLinecap="round" />
-      <path d="M15 80L5 90L20 95L25 85Z" fill="#D4A017" stroke="#B8960F" strokeWidth="1" />
-      <line x1="85" y1="72" x2="50" y2="35" stroke="#888" strokeWidth="3" strokeLinecap="round" />
-      <line x1="45" y1="38" x2="22" y2="60" stroke="#888" strokeWidth="2.5" strokeLinecap="round" />
-      <rect x="90" y="50" width="4" height="12" rx="2" fill="#555" />
-      <rect x="110" y="72" width="30" height="10" rx="2" fill="#D4A017" />
-      <text x="125" y="80" textAnchor="middle" fontSize="7" fontWeight="bold" fill="#fff" fontFamily="Arial">CAT</text>
-      <rect x="148" y="66" width="8" height="30" rx="2" fill="#D4A017" />
+      <rect x="28" y="98" width="148" height="30" rx="15" fill="none"
+        stroke="#3a3a3a" strokeWidth="2"
+        strokeDasharray="10 6"
+        style={{ animationName: "trackScroll", animationDuration: "0.9s", animationTimingFunction: "linear", animationIterationCount: "infinite" }}
+      />
+
+      {/* Body */}
+      <rect x="42" y="60" width="118" height="42" rx="7" fill="#FFCB05" />
+      <rect x="46" y="64" width="110" height="34" rx="5" fill="#E8B800" />
+      {/* Body panel details */}
+      <rect x="50" y="68" width="28" height="18" rx="3" fill="#D4A017" opacity="0.35" />
+      <rect x="82" y="68" width="18" height="18" rx="3" fill="#D4A017" opacity="0.25" />
+
+      {/* Cab */}
+      <rect x="104" y="38" width="52" height="42" rx="6" fill="#FFCB05" stroke="#D4A017" strokeWidth="1" />
+      <rect x="109" y="43" width="42" height="24" rx="3" fill="#4FC3F7" opacity="0.55" />
+      <line x1="109" y1="55" x2="151" y2="55" stroke="rgba(255,255,255,0.3)" strokeWidth="0.8" />
+      <rect x="109" y="43" width="42" height="24" rx="3" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="0.6" />
+      {/* Cab glint */}
+      <path d="M112 45 L124 43 L124 47Z" fill="rgba(255,255,255,0.35)" />
+
+      {/* Hydraulic cylinder (boom) */}
+      <line x1={pivotX + 4} y1={pivotY - 2}
+            x2={pivotX + Math.cos(bA) * boomLen * 0.48 + 4}
+            y2={pivotY + Math.sin(bA) * boomLen * 0.48}
+            stroke="#777" strokeWidth="4" strokeLinecap="round" />
+      {/* Hydraulic cylinder (stick) */}
+      <line x1={bEx - Math.cos(bA) * 6} y1={bEy - Math.sin(bA) * 6}
+            x2={bEx + Math.cos(sA) * stickLen * 0.44}
+            y2={bEy + Math.sin(sA) * stickLen * 0.44}
+            stroke="#777" strokeWidth="3" strokeLinecap="round" />
+
+      {/* Boom */}
+      <line x1={pivotX} y1={pivotY} x2={bEx} y2={bEy} stroke="#FFCB05" strokeWidth="11" strokeLinecap="round" />
+      <line x1={pivotX} y1={pivotY} x2={bEx} y2={bEy} stroke="#D4A017" strokeWidth="7"  strokeLinecap="round" />
+      {/* Stick */}
+      <line x1={bEx} y1={bEy} x2={sEx} y2={sEy} stroke="#FFCB05" strokeWidth="9" strokeLinecap="round" />
+      <line x1={bEx} y1={bEy} x2={sEx} y2={sEy} stroke="#D4A017" strokeWidth="5.5" strokeLinecap="round" />
+      {/* Bucket */}
+      <path d={`M${sEx.toFixed(1)} ${sEy.toFixed(1)} L${buTx.toFixed(1)} ${buTy.toFixed(1)} L${buNx.toFixed(1)} ${buNy.toFixed(1)} Z`}
+            fill="#D4A017" stroke="#B8960F" strokeWidth="1.2" strokeLinejoin="round" />
+      {/* Bucket teeth */}
+      {[0, 0.35, 0.7].map((off, i) => {
+        const tx = buTx + Math.cos(buA + off) * 5;
+        const ty = buTy + Math.sin(buA + off) * 5;
+        return <circle key={i} cx={tx.toFixed(1)} cy={ty.toFixed(1)} r="2" fill="#B8960F" />;
+      })}
+
+      {/* Joint pins */}
+      <circle cx={pivotX} cy={pivotY} r="4.5" fill="#333" stroke="#555" strokeWidth="1" />
+      <circle cx={bEx.toFixed(1)} cy={bEy.toFixed(1)} r="3.5" fill="#333" stroke="#555" strokeWidth="1" />
+      <circle cx={sEx.toFixed(1)} cy={sEy.toFixed(1)} r="3" fill="#333" stroke="#555" strokeWidth="1" />
+
+      {/* CAT badge */}
+      <rect x="112" y="72" width="34" height="12" rx="2.5" fill="#D4A017" />
+      <text x="129" y="81" textAnchor="middle" fontSize="8" fontWeight="900" fill="#fff" fontFamily="Arial, sans-serif" letterSpacing="1">CAT</text>
+
+      {/* Warning beacon */}
+      <circle cx="152" cy="39" r="4" fill="#FF6B00" style={{ animationName: "blink", animationDuration: "1.2s", animationTimingFunction: "ease-in-out", animationIterationCount: "infinite" }} />
     </svg>
   );
 }
@@ -333,57 +627,146 @@ function ReportPhotoStrip({ files }: { files: File[] }) {
    PAGE 1 — MACHINE SELECT
    ════════════════════════════════════════════════════ */
 function MachineSelectPage({ onSelect }: { onSelect: (m: any) => void }) {
+  useGlobalStyles();
   const now = new Date();
+
   return (
-    <div style={{ minHeight: "100vh", background: "#f4f5f7" }}>
-      {/* Top bar */}
-      <div style={{ background: "#fff", borderBottom: "1px solid #e5e7eb", padding: "14px 28px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ background: "#FFCB05", padding: "5px 10px", borderRadius: 4 }}>
-            <span style={{ fontWeight: 900, fontSize: 16, color: "#000", letterSpacing: 1 }}>CAT</span>
-          </div>
-          <div style={{ height: 24, width: 1, background: "#e5e5e5" }} />
-          <span style={{ fontSize: 14, fontWeight: 600, color: "#333" }}>Safety Inspection Platform</span>
-        </div>
-        <div style={{ fontSize: 13, color: "#999" }}>{now.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}</div>
+    <div style={{ minHeight: "100vh", background: "#070d1a", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+      {/* ── Animated background layers ── */}
+      <div style={{ position: "fixed", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 0 }}>
+        {/* Radial gradient */}
+        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 80% 60% at 50% 10%, rgba(255,203,5,0.12) 0%, transparent 70%)" }} />
+        {/* Grid pattern */}
+        <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.06 }} xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+              <path d="M 48 0 L 0 0 0 48" fill="none" stroke="#FFCB05" strokeWidth="0.6" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#grid)" />
+        </svg>
+        {/* Floating orb 1 */}
+        <div style={{ position: "absolute", top: "20%", left: "10%", width: 300, height: 300, borderRadius: "50%", background: "radial-gradient(circle, rgba(255,203,5,0.08) 0%, transparent 70%)", animation: "floatY 7s ease-in-out infinite" }} />
+        {/* Floating orb 2 */}
+        <div style={{ position: "absolute", bottom: "15%", right: "8%", width: 220, height: 220, borderRadius: "50%", background: "radial-gradient(circle, rgba(37,99,235,0.1) 0%, transparent 70%)", animation: "floatSlow 9s ease-in-out infinite" }} />
+        <ParticleCanvas />
       </div>
 
-      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "48px 28px" }}>
-        <h1 style={{ fontSize: 28, fontWeight: 800, color: "#111", margin: "0 0 6px", letterSpacing: "-0.02em" }}>Welcome to CAT Safety Inspection</h1>
-        <p style={{ fontSize: 15, color: "#777", margin: "0 0 36px" }}>Select an excavator to begin the pre-shift inspection.</p>
+      {/* ── Nav bar ── */}
+      <div style={{ position: "relative", zIndex: 10, padding: "18px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <CaterpillarLogo />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", animation: "pulseDot 2s ease-in-out infinite" }} />
+          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>
+            {now.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
+          </span>
+        </div>
+      </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 20 }}>
-          {MACHINES.map((m) => (
-            <div key={m.id} style={{
-              background: "#fff", borderRadius: 16, overflow: "hidden", border: "1px solid #e8e8e8",
-              transition: "all 0.2s", cursor: "pointer", boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-            }}
-              onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "0 8px 28px rgba(0,0,0,0.08)"; e.currentTarget.style.transform = "translateY(-3px)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.04)"; e.currentTarget.style.transform = "translateY(0)"; }}>
+      {/* ── Hero ── */}
+      <div style={{ position: "relative", zIndex: 10, textAlign: "center", padding: "52px 28px 32px" }}>
+        {/* Spinning ring behind excavator */}
+        <div style={{ position: "relative", display: "inline-block" }}>
+          <div style={{
+            position: "absolute", inset: -28,
+            borderRadius: "50%",
+            border: "1.5px solid rgba(255,203,5,0.18)",
+            animation: "spinSlow 18s linear infinite",
+          }}>
+            {[0, 90, 180, 270].map((deg) => (
+              <div key={deg} style={{ position: "absolute", top: "50%", left: "50%", width: 8, height: 8, borderRadius: "50%", background: "rgba(255,203,5,0.5)", transform: `rotate(${deg}deg) translateX(${(80 + 28)}px) translateY(-50%)`, }} />
+            ))}
+          </div>
+          <div style={{
+            position: "absolute", inset: -52,
+            borderRadius: "50%",
+            border: "1px dashed rgba(255,203,5,0.08)",
+            animation: "spinSlowReverse 28s linear infinite",
+          }} />
+          <div style={{ animation: "floatY 4s ease-in-out infinite", filter: "drop-shadow(0 12px 32px rgba(255,203,5,0.25))" }}>
+            <ExcavatorSVG width={210} />
+          </div>
+        </div>
 
-              <div style={{ background: "linear-gradient(145deg, #fafafa, #f0f0f0)", padding: "28px 20px 16px", display: "flex", justifyContent: "center", position: "relative" }}>
-                <ExcavatorSVG width={170} />
-                <div style={{ position: "absolute", top: 12, right: 12, background: "#fff", padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, color: "#666", border: "1px solid #eee" }}>
-                  {m.hours} hrs
+        <div style={{ marginTop: 28 }}>
+          <h1 className="shimmer-text" style={{ fontSize: 36, fontWeight: 900, margin: "0 0 10px", letterSpacing: "-0.025em", animation: "fadeInUp 0.7s ease both" }}>
+            CAT Safety Inspection
+          </h1>
+          <p style={{ fontSize: 15, color: "rgba(255,255,255,0.45)", margin: 0, animation: "fadeInUp 0.7s 0.15s ease both", fontWeight: 400 }}>
+            AI-powered pre-shift inspection · Select your machine to begin
+          </p>
+        </div>
+      </div>
+
+      {/* ── Machine cards ── */}
+      <div style={{ position: "relative", zIndex: 10, maxWidth: 980, margin: "0 auto", padding: "0 28px 60px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 22 }}>
+        {MACHINES.map((m, idx) => (
+          <TiltCard key={m.id} style={{ borderRadius: 20, overflow: "hidden", animation: `fadeInUp 0.6s ${0.1 + idx * 0.12}s ease both`, cursor: "pointer" }}>
+            <div className="glass" style={{ borderRadius: 20, overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.1)" }}>
+              {/* Real machine photo */}
+              <div style={{ position: "relative", height: 200, overflow: "hidden" }}>
+                <img
+                  src={m.photo}
+                  alt={m.model}
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform 0.5s ease" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+                />
+                {/* Dark gradient overlay */}
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(7,13,26,0.7) 0%, transparent 60%)" }} />
+                {/* Hours badge */}
+                <div style={{ position: "absolute", top: 12, right: 12, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)", padding: "4px 10px", borderRadius: 20, border: "1px solid rgba(255,255,255,0.15)" }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#FFCB05" }}>{m.hours.toLocaleString()} hrs</span>
+                </div>
+                {/* Status */}
+                <div style={{ position: "absolute", top: 14, left: 14, display: "flex", alignItems: "center", gap: 5 }}>
+                  <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", animation: "pulseDot 1.8s ease-in-out infinite", animationDelay: `${idx * 0.4}s` }} />
+                  <span style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", fontWeight: 700, letterSpacing: "0.06em", textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}>READY</span>
                 </div>
               </div>
 
-              <div style={{ padding: "16px 20px 20px" }}>
-                <h3 style={{ fontSize: 18, fontWeight: 700, color: "#111", margin: "0 0 3px" }}>{m.model}</h3>
-                <p style={{ fontSize: 12, color: "#aaa", margin: "0 0 16px", fontFamily: "monospace" }}>S/N: {m.serial}</p>
-                <button onClick={() => onSelect(m)} style={{
-                  width: "100%", padding: "11px 0", borderRadius: 10, border: "none",
-                  background: "#2563eb", color: "#fff", fontSize: 13, fontWeight: 700,
-                  cursor: "pointer", transition: "background 0.15s", letterSpacing: "0.03em",
-                }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "#1d4ed8")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "#2563eb")}>
-                  START INSPECTION
+              {/* Card body */}
+              <div style={{ padding: "18px 22px 22px" }}>
+                <div style={{ marginBottom: 14 }}>
+                  <h3 style={{ fontSize: 20, fontWeight: 800, color: "#fff", margin: "0 0 4px", letterSpacing: "-0.01em" }}>{m.model}</h3>
+                  <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", margin: 0, fontFamily: "monospace", letterSpacing: "0.06em" }}>S/N: {m.serial}</p>
+                </div>
+
+                {/* Specs row */}
+                <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                  {[
+                    { label: "Engine", value: m.engine },
+                    { label: "Weight", value: m.weight },
+                    { label: "Max Depth", value: m.depth },
+                  ].map((spec) => (
+                    <div key={spec.label} style={{ flex: 1, background: "rgba(255,255,255,0.05)", borderRadius: 8, padding: "6px 8px", border: "1px solid rgba(255,255,255,0.07)" }}>
+                      <div style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 700 }}>{spec.label}</div>
+                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.8)", fontWeight: 700, marginTop: 2 }}>{spec.value}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => onSelect(m)}
+                  style={{
+                    width: "100%", padding: "12px 0", borderRadius: 11, border: "none",
+                    background: "linear-gradient(135deg, #FFCB05 0%, #f59e0b 100%)",
+                    color: "#000", fontSize: 13, fontWeight: 800, cursor: "pointer",
+                    letterSpacing: "0.06em", textTransform: "uppercase",
+                    boxShadow: "0 4px 20px rgba(255,203,5,0.3)",
+                    transition: "transform 0.15s, box-shadow 0.15s",
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "0 6px 28px rgba(255,203,5,0.55)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "0 4px 20px rgba(255,203,5,0.3)"; e.currentTarget.style.transform = "translateY(0)"; }}
+                >
+                  Start Inspection →
                 </button>
               </div>
             </div>
-          ))}
-        </div>
+          </TiltCard>
+        ))}
       </div>
     </div>
   );
@@ -393,10 +776,12 @@ function MachineSelectPage({ onSelect }: { onSelect: (m: any) => void }) {
    PAGE 2 — SECTION DASHBOARD
    ════════════════════════════════════════════════════ */
 function SectionDashboard({ machine, textRemarks, audioRemarks, photos, onSelectSection, onBack, onSubmit, onSaveProgress, syncState }: any) {
+  useGlobalStyles();
   const totalItems = ACTIVE_SECTIONS.reduce((s, sec) => s + sec.items.length, 0);
   const completedItems = ACTIVE_SECTIONS.flatMap((sec) => sec.items).filter((item: any) =>
     hasAnyInput(item.id, textRemarks, audioRemarks, photos),
   ).length;
+  const pctDone = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
 
   const getSectionStats = (sec: any) => {
     const done = sec.items.filter((i: any) => hasAnyInput(i.id, textRemarks, audioRemarks, photos)).length;
@@ -404,99 +789,149 @@ function SectionDashboard({ machine, textRemarks, audioRemarks, photos, onSelect
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f4f5f7" }}>
-      {/* Top bar */}
-      <div style={{ background: "#fff", borderBottom: "1px solid #e5e7eb", padding: "14px 28px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+    <div style={{ minHeight: "100vh", background: "#070d1a", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+      {/* Background */}
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }}>
+        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255,203,5,0.07) 0%, transparent 70%)" }} />
+        <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.04 }}>
+          <defs>
+            <pattern id="grid2" width="48" height="48" patternUnits="userSpaceOnUse">
+              <path d="M 48 0 L 0 0 0 48" fill="none" stroke="#FFCB05" strokeWidth="0.6" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#grid2)" />
+        </svg>
+        <ParticleCanvas />
+      </div>
+
+      {/* ── Top bar ── */}
+      <div style={{ position: "relative", zIndex: 10, padding: "14px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.07)", background: "rgba(7,13,26,0.8)", backdropFilter: "blur(12px)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", padding: 6, display: "flex", color: "#666", borderRadius: 8 }}><ArrowLeft /></button>
-          <div style={{ background: "#FFCB05", padding: "5px 10px", borderRadius: 4 }}>
-            <span style={{ fontWeight: 900, fontSize: 15, color: "#000", letterSpacing: 1 }}>CAT</span>
-          </div>
+          <button onClick={onBack} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", cursor: "pointer", padding: "7px", display: "flex", color: "rgba(255,255,255,0.6)", borderRadius: 8, transition: "all 0.15s" }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; e.currentTarget.style.color = "#fff"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "rgba(255,255,255,0.6)"; }}>
+            <ArrowLeft />
+          </button>
+          <CaterpillarLogo />
+          <div style={{ width: 1, height: 28, background: "rgba(255,255,255,0.1)", marginLeft: 4 }} />
           <div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "#111" }}>{machine.model}</div>
-            <div style={{ fontSize: 11, color: "#aaa", fontFamily: "monospace" }}>S/N: {machine.serial}</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>{machine.model}</div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", fontFamily: "monospace" }}>S/N: {machine.serial}</div>
           </div>
         </div>
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: 10, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>Machine Hours</div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: "#111" }}>{machine.hours} <span style={{ fontSize: 12, color: "#aaa", fontWeight: 400 }}>hrs</span></div>
+          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>Machine Hours</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: "#FFCB05" }}>{machine.hours} <span style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", fontWeight: 400 }}>hrs</span></div>
         </div>
       </div>
 
-      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "28px 28px 120px" }}>
-        {/* Overall progress */}
-        <div style={{ background: "#fff", borderRadius: 16, padding: "22px 24px", marginBottom: 28, border: "1px solid #e8e8e8" }}>
+      <div style={{ position: "relative", zIndex: 10, maxWidth: 1000, margin: "0 auto", padding: "28px 28px 120px" }}>
+        {/* ── Overall progress glass card ── */}
+        <div className="glass" style={{ borderRadius: 18, padding: "22px 26px", marginBottom: 28, boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)", animation: "fadeInUp 0.5s ease both" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
             <div>
-              <div style={{ fontSize: 12, color: "#aaa", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>Overall Progress</div>
-              <div style={{ fontSize: 26, fontWeight: 800, color: "#111" }}>
-                {completedItems}<span style={{ color: "#ddd" }}>/{totalItems}</span>
-                <span style={{ fontSize: 13, fontWeight: 500, color: "#aaa", marginLeft: 8 }}>items inspected</span>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>Overall Progress</div>
+              <div style={{ fontSize: 30, fontWeight: 900, color: "#fff", lineHeight: 1 }}>
+                {completedItems}
+                <span style={{ color: "rgba(255,255,255,0.2)" }}>/{totalItems}</span>
+                <span style={{ fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.4)", marginLeft: 10 }}>items inspected</span>
               </div>
             </div>
-            <div />
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 36, fontWeight: 900, color: "#FFCB05", lineHeight: 1 }}>{Math.round(pctDone)}%</div>
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 2 }}>Complete</div>
+            </div>
           </div>
-          <ProgressBar value={completedItems} max={totalItems} large />
+          {/* Segmented animated bar */}
+          <div style={{ height: 10, background: "rgba(255,255,255,0.07)", borderRadius: 10, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${pctDone}%`, borderRadius: 10, background: "linear-gradient(90deg, #FFCB05 0%, #f59e0b 100%)", boxShadow: "0 0 16px rgba(255,203,5,0.5)", transition: "width 0.8s cubic-bezier(.25,.46,.45,.94)" }} />
+          </div>
         </div>
 
-        {/* Section cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 18 }}>
-          {ACTIVE_SECTIONS.map((sec) => {
+        {/* ── Section cards ── */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(285px, 1fr))", gap: 18 }}>
+          {ACTIVE_SECTIONS.map((sec, idx) => {
             const stats = getSectionStats(sec);
             const isComplete = stats.done === stats.total;
+            const secPct = stats.total > 0 ? (stats.done / stats.total) * 100 : 0;
             return (
-              <div key={sec.key} onClick={() => onSelectSection(sec.key)}
-                style={{
-                  background: "#fff", borderRadius: 16, overflow: "hidden", cursor: "pointer",
-                  border: isComplete ? "2px solid #bbf7d0" : "1px solid #e8e8e8",
-                  transition: "all 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "0 6px 24px rgba(0,0,0,0.07)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.03)"; e.currentTarget.style.transform = "translateY(0)"; }}>
+              <TiltCard key={sec.key} style={{ borderRadius: 18, animation: `fadeInUp 0.55s ${0.1 + idx * 0.1}s ease both`, cursor: "pointer" }}>
+                <div className="glass" onClick={() => onSelectSection(sec.key)}
+                  style={{
+                    borderRadius: 18, overflow: "hidden",
+                    border: isComplete ? "1.5px solid rgba(34,197,94,0.4)" : "1px solid rgba(255,255,255,0.1)",
+                    boxShadow: isComplete ? "0 8px 32px rgba(34,197,94,0.15), inset 0 1px 0 rgba(255,255,255,0.08)" : "0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06)",
+                  }}>
 
-                <div style={{ background: isComplete ? "linear-gradient(135deg, #f0fdf4, #ecfdf5)" : "linear-gradient(145deg, #fafafa, #f3f3f3)", padding: 24, display: "flex", justifyContent: "center", position: "relative" }}>
-                  {SECTION_ICONS[sec.key]}
-                  {isComplete && (
-                    <div style={{ position: "absolute", top: 10, right: 10, background: "#16a34a", borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <CheckSvg size={13} color="#fff" />
+                  {/* Icon area */}
+                  <div style={{ position: "relative", padding: "26px 20px 18px", display: "flex", justifyContent: "center", overflow: "hidden", background: isComplete ? "linear-gradient(145deg, rgba(34,197,94,0.12) 0%, rgba(34,197,94,0.04) 100%)" : "linear-gradient(145deg, rgba(255,203,5,0.06) 0%, rgba(255,203,5,0.02) 100%)" }}>
+                    <div style={{ animationName: "floatY", animationDuration: `${3.5 + idx * 0.4}s`, animationTimingFunction: "ease-in-out", animationIterationCount: "infinite" }}>
+                      {SECTION_ICONS[sec.key]}
                     </div>
-                  )}
-                </div>
-
-                <div style={{ padding: "16px 20px 20px" }}>
-                  <h3 style={{ fontSize: 14, fontWeight: 700, color: "#111", margin: "0 0 3px", textTransform: "uppercase", letterSpacing: "0.04em" }}>{sec.title}</h3>
-                  <p style={{ fontSize: 11, color: "#aaa", margin: "0 0 14px", lineHeight: 1.4 }}>{sec.description}</p>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: "#666" }}>{stats.done}/{stats.total}</span>
+                    {isComplete && (
+                      <div style={{ position: "absolute", top: 10, right: 10, background: "#16a34a", borderRadius: "50%", width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 12px rgba(34,197,94,0.5)" }}>
+                        <CheckSvg size={13} color="#fff" />
+                      </div>
+                    )}
+                    {!isComplete && stats.done > 0 && (
+                      <div style={{ position: "absolute", top: 12, right: 12, width: 7, height: 7, borderRadius: "50%", background: "#FFCB05", animation: "pulseDot 1.6s ease-in-out infinite" }} />
+                    )}
                   </div>
-                  <ProgressBar value={stats.done} max={stats.total} green={isComplete} />
-                  <button style={{
-                    width: "100%", marginTop: 14, padding: "9px 0", borderRadius: 8,
-                    background: isComplete ? "#f0fdf4" : "#2563eb", color: isComplete ? "#16a34a" : "#fff",
-                    border: isComplete ? "1px solid #bbf7d0" : "none",
-                    fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.15s", letterSpacing: "0.02em",
-                  }}
-                    onMouseEnter={(e) => !isComplete && (e.currentTarget.style.background = "#1d4ed8")}
-                    onMouseLeave={(e) => !isComplete && (e.currentTarget.style.background = "#2563eb")}>
-                    {stats.done === 0 ? "START INSPECTION" : isComplete ? "✓ COMPLETE" : "CONTINUE"}
-                  </button>
+
+                  <div style={{ padding: "16px 20px 20px" }}>
+                    <h3 style={{ fontSize: 13, fontWeight: 800, color: isComplete ? "#4ade80" : "#fff", margin: "0 0 4px", textTransform: "uppercase", letterSpacing: "0.05em" }}>{sec.title}</h3>
+                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", margin: "0 0 14px", lineHeight: 1.5 }}>{sec.description}</p>
+
+                    {/* Mini progress */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>{stats.done}/{stats.total} items</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: isComplete ? "#4ade80" : "#FFCB05" }}>{Math.round(secPct)}%</span>
+                    </div>
+                    <div style={{ height: 5, background: "rgba(255,255,255,0.08)", borderRadius: 5, overflow: "hidden", marginBottom: 14 }}>
+                      <div style={{ height: "100%", width: `${secPct}%`, borderRadius: 5, background: isComplete ? "linear-gradient(90deg,#22c55e,#4ade80)" : "linear-gradient(90deg,#FFCB05,#f59e0b)", transition: "width 0.6s ease", boxShadow: isComplete ? "0 0 8px rgba(34,197,94,0.5)" : "0 0 8px rgba(255,203,5,0.4)" }} />
+                    </div>
+
+                    <button style={{
+                      width: "100%", padding: "10px 0", borderRadius: 10, border: "none",
+                      background: isComplete ? "linear-gradient(135deg, rgba(34,197,94,0.2), rgba(34,197,94,0.12))" : "linear-gradient(135deg, #FFCB05 0%, #f59e0b 100%)",
+                      color: isComplete ? "#4ade80" : "#000",
+                      fontSize: 12, fontWeight: 800, cursor: "pointer",
+                      letterSpacing: "0.05em", textTransform: "uppercase",
+                      boxShadow: isComplete ? "none" : "0 4px 16px rgba(255,203,5,0.3)",
+                      border: isComplete ? "1px solid rgba(34,197,94,0.3)" : "none",
+                      transition: "all 0.15s",
+                    }}
+                      onMouseEnter={(e) => { if (!isComplete) { e.currentTarget.style.boxShadow = "0 6px 24px rgba(255,203,5,0.5)"; e.currentTarget.style.transform = "translateY(-1px)"; } }}
+                      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = isComplete ? "none" : "0 4px 16px rgba(255,203,5,0.3)"; e.currentTarget.style.transform = "translateY(0)"; }}>
+                      {stats.done === 0 ? "Start →" : isComplete ? "✓ Complete" : "Continue →"}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              </TiltCard>
             );
           })}
         </div>
       </div>
 
-      {/* Bottom bar */}
-      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#fff", borderTop: "1px solid #e5e7eb", padding: "14px 28px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 90 }}>
+      {/* ── Bottom bar ── */}
+      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, padding: "14px 28px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 90, background: "rgba(7,13,26,0.85)", backdropFilter: "blur(16px)", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
         <SyncBadge text={syncState} />
         <div style={{ display: "flex", gap: 10 }}>
-          <button onClick={onSaveProgress} style={{ padding: "9px 20px", borderRadius: 8, border: "1px solid #ddd", background: "#fff", color: "#555", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Save Progress</button>
+          <button onClick={onSaveProgress} style={{ padding: "9px 20px", borderRadius: 9, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.7)", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.15s" }}
+            onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.12)"}
+            onMouseLeave={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.06)"}>
+            Save Progress
+          </button>
           <button onClick={onSubmit} style={{
-            padding: "9px 28px", borderRadius: 8, border: "none",
-            background: "#16a34a", color: "#fff",
-            fontSize: 13, fontWeight: 700, cursor: "pointer",
-          }}>Submit Inspection</button>
+            padding: "9px 28px", borderRadius: 9, border: "none",
+            background: "linear-gradient(135deg, #16a34a, #15803d)",
+            color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer",
+            boxShadow: "0 4px 16px rgba(22,163,74,0.4)", transition: "all 0.15s",
+          }}
+            onMouseEnter={(e) => e.currentTarget.style.boxShadow = "0 6px 24px rgba(22,163,74,0.6)"}
+            onMouseLeave={(e) => e.currentTarget.style.boxShadow = "0 4px 16px rgba(22,163,74,0.4)"}>
+            Submit Inspection
+          </button>
         </div>
       </div>
     </div>
@@ -529,27 +964,48 @@ function InspectionChecklist({ sectionKey, textRemarks, audioRemarks, photos, on
   const stats = { done: section.items.filter((i: any) => hasAnyInput(i.id, textRemarks, audioRemarks, photos)).length, total: section.items.length };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f4f5f7" }}>
-      {/* Sticky header */}
-      <div style={{ background: "#fff", borderBottom: "1px solid #e5e7eb", padding: "12px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", padding: 6, display: "flex", color: "#666", borderRadius: 8 }}><ArrowLeft /></button>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "#111" }}>{section.title}</div>
-            <div style={{ fontSize: 11, color: "#aaa" }}>{stats.done}/{stats.total} completed</div>
-          </div>
-        </div>
-        <div style={{ width: 160 }}><ProgressBar value={stats.done} max={stats.total} /></div>
+    <div style={{ minHeight: "100vh", background: "#070d1a", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+      {/* Background */}
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }}>
+        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 60% 40% at 50% 0%, rgba(255,203,5,0.06) 0%, transparent 70%)" }} />
       </div>
 
-      <div style={{ maxWidth: 780, margin: "0 auto", padding: "20px 20px 100px" }}>
-        {/* Section header card */}
-        <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #e8e8e8", padding: "16px 24px 12px", marginBottom: 16, display: "flex", alignItems: "center", gap: 20 }}>
-          <ExcavatorSVG width={100} />
+      {/* Sticky header */}
+      <div style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(7,13,26,0.88)", backdropFilter: "blur(14px)", borderBottom: "1px solid rgba(255,255,255,0.07)", padding: "12px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button onClick={onBack} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", cursor: "pointer", padding: "7px", display: "flex", color: "rgba(255,255,255,0.6)", borderRadius: 8, transition: "all 0.15s" }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; e.currentTarget.style.color = "#fff"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "rgba(255,255,255,0.6)"; }}>
+            <ArrowLeft />
+          </button>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: "#111", marginBottom: 2 }}>{section.title}</div>
-            <div style={{ fontSize: 13, color: "#888", lineHeight: 1.4 }}>{section.description}</div>
-            <div style={{ fontSize: 12, color: "#bbb", marginTop: 6 }}>{stats.total} inspection items</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>{section.title}</div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>{stats.done}/{stats.total} completed</div>
+          </div>
+        </div>
+        {/* Progress bar in header */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 140, height: 6, background: "rgba(255,255,255,0.08)", borderRadius: 6, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${stats.total > 0 ? (stats.done / stats.total) * 100 : 0}%`, background: "linear-gradient(90deg,#FFCB05,#f59e0b)", borderRadius: 6, transition: "width 0.5s ease", boxShadow: "0 0 8px rgba(255,203,5,0.4)" }} />
+          </div>
+          <span style={{ fontSize: 11, fontWeight: 700, color: "#FFCB05", minWidth: 28 }}>{Math.round(stats.total > 0 ? (stats.done / stats.total) * 100 : 0)}%</span>
+        </div>
+      </div>
+
+      <div style={{ position: "relative", zIndex: 10, maxWidth: 780, margin: "0 auto", padding: "20px 20px 100px" }}>
+        {/* Section header card */}
+        <div className="glass" style={{ borderRadius: 16, padding: "18px 22px", marginBottom: 16, display: "flex", alignItems: "center", gap: 18, boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)" }}>
+          <div style={{ flexShrink: 0, width: 56, height: 56, borderRadius: 16, background: "rgba(255,203,5,0.12)", border: "1px solid rgba(255,203,5,0.2)", display: "flex", alignItems: "center", justifyContent: "center", animation: "floatY 4s ease-in-out infinite" }}>
+            <span style={{ fontSize: 28 }}>{section.emoji}</span>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 11, color: "rgba(255,203,5,0.6)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 3 }}>Inspection Checklist</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#fff", marginBottom: 3 }}>{section.title}</div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 1.5 }}>{section.description}</div>
+          </div>
+          <div style={{ textAlign: "right", flexShrink: 0 }}>
+            <div style={{ fontSize: 28, fontWeight: 900, color: "#FFCB05", lineHeight: 1 }}>{stats.total}</div>
+            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>Items</div>
           </div>
         </div>
 
@@ -565,9 +1021,11 @@ function InspectionChecklist({ sectionKey, textRemarks, audioRemarks, photos, on
 
           return (
             <div key={item.id} style={{
-              background: "#fff", borderRadius: 14, marginBottom: 8, overflow: "hidden",
-              border: `1px solid ${hasObservation ? "#bbf7d0" : "#e8e8e8"}`,
-              transition: "all 0.2s", boxShadow: isExpanded ? "0 4px 16px rgba(0,0,0,0.05)" : "none",
+              background: hasObservation ? "rgba(34,197,94,0.06)" : "rgba(255,255,255,0.05)",
+              backdropFilter: "blur(12px)",
+              borderRadius: 14, marginBottom: 8, overflow: "hidden",
+              border: hasObservation ? "1px solid rgba(34,197,94,0.3)" : "1px solid rgba(255,255,255,0.08)",
+              transition: "all 0.25s", boxShadow: isExpanded ? "0 8px 28px rgba(0,0,0,0.4)" : "none",
             }}>
               {/* Collapsed row */}
               <div onClick={() => setExpandedItem(isExpanded ? null : item.id)}
@@ -575,39 +1033,40 @@ function InspectionChecklist({ sectionKey, textRemarks, audioRemarks, photos, on
                 <div style={{
                   width: 30, height: 30, borderRadius: 8, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: 12, fontWeight: 700,
-                  background: hasObservation ? "#f0fdf4" : "#f5f5f5", color: hasObservation ? "#16a34a" : "#ccc",
-                  border: `1.5px solid ${hasObservation ? "#bbf7d0" : "#e5e5e5"}`,
+                  background: hasObservation ? "rgba(34,197,94,0.2)" : "rgba(255,255,255,0.06)",
+                  color: hasObservation ? "#4ade80" : "rgba(255,255,255,0.3)",
+                  border: `1.5px solid ${hasObservation ? "rgba(34,197,94,0.4)" : "rgba(255,255,255,0.1)"}`,
                 }}>
-                  {hasObservation ? <CheckSvg size={14} color="#16a34a" /> : idx + 1}
+                  {hasObservation ? <CheckSvg size={14} color="#4ade80" /> : idx + 1}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: "#222" }}>{item.name}</div>
-                  {!isExpanded && <div style={{ fontSize: 11, color: "#bbb", marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.lookFor}</div>}
+                  <div style={{ fontSize: 14, fontWeight: 600, color: hasObservation ? "#fff" : "rgba(255,255,255,0.8)" }}>{item.name}</div>
+                  {!isExpanded && <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.lookFor}</div>}
                 </div>
                 {!isExpanded && (
-                  <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+                  <div style={{ display: "flex", gap: 5, alignItems: "center", color: "rgba(255,255,255,0.4)" }}>
                     {hasAudio && <MicSvg size={13} />}
                     {hasPhotos && <CameraSvg size={13} />}
                     {hasText && <span style={{ fontSize: 12 }}>📝</span>}
                   </div>
                 )}
-                <span style={{ transform: isExpanded ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.25s", flexShrink: 0, display: "flex" }}><ChevronDown /></span>
+                <span style={{ transform: isExpanded ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.25s", flexShrink: 0, display: "flex", color: "rgba(255,255,255,0.25)" }}><ChevronDown /></span>
               </div>
 
               {/* Expanded */}
               {isExpanded && (
-                <div style={{ padding: "0 18px 18px", animation: "fadeSlideIn 0.2s ease" }}>
+                <div style={{ padding: "0 18px 18px", animation: "fadeIn 0.2s ease" }}>
                   {/* Look-for callout */}
-                  <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 10, padding: "10px 14px", marginBottom: 16, display: "flex", gap: 10, alignItems: "flex-start" }}>
+                  <div style={{ background: "rgba(255,203,5,0.08)", border: "1px solid rgba(255,203,5,0.2)", borderRadius: 10, padding: "10px 14px", marginBottom: 16, display: "flex", gap: 10, alignItems: "flex-start" }}>
                     <span style={{ fontSize: 15 }}>⚠️</span>
                     <div>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: "#92400e", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 2 }}>Look For</div>
-                      <div style={{ fontSize: 13, color: "#78350f", lineHeight: 1.5 }}>{item.lookFor}</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,203,5,0.7)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 2 }}>Look For</div>
+                      <div style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.5 }}>{item.lookFor}</div>
                     </div>
                   </div>
 
                   {/* Text remarks */}
-                  <label style={{ fontSize: 10, fontWeight: 700, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 5 }}>Remarks</label>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 5 }}>Remarks</label>
                   <textarea
                     value={textRemarks[item.id] || ""}
                     onChange={(e) => onUpdateText(item.id, e.target.value, false)}
@@ -615,12 +1074,14 @@ function InspectionChecklist({ sectionKey, textRemarks, audioRemarks, photos, on
                     onClick={(e) => e.stopPropagation()}
                     placeholder="Type your observations here..."
                     style={{
-                      width: "100%", minHeight: 65, padding: "10px 12px", background: "#fafafa",
-                      border: "1.5px solid #e5e5e5", borderRadius: 10, color: "#333", fontSize: 13,
+                      width: "100%", minHeight: 65, padding: "10px 12px",
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1.5px solid rgba(255,255,255,0.1)", borderRadius: 10,
+                      color: "#fff", fontSize: 13,
                       resize: "vertical", outline: "none", fontFamily: "inherit", lineHeight: 1.5,
                     }}
-                    onFocus={(e) => { e.target.style.borderColor = "#2563eb"; e.target.style.background = "#fff"; }}
-
+                    onFocus={(e) => { e.target.style.borderColor = "rgba(255,203,5,0.5)"; e.target.style.background = "rgba(255,255,255,0.07)"; }}
+                    onBlurCapture={(e) => { e.target.style.borderColor = "rgba(255,255,255,0.1)"; e.target.style.background = "rgba(255,255,255,0.04)"; }}
                   />
 
                   {/* Audio + Photo buttons */}
@@ -629,13 +1090,13 @@ function InspectionChecklist({ sectionKey, textRemarks, audioRemarks, photos, on
                       <button onClick={(e) => { e.stopPropagation(); stopRecording(); }}
                         style={{
                           display: "flex", alignItems: "center", gap: 10, padding: "9px 16px", borderRadius: 10,
-                          background: "#fef2f2", border: "2px solid #fecaca", color: "#dc2626", fontSize: 12, fontWeight: 600,
-                          cursor: "pointer", animation: "pulse 1.5s infinite",
+                          background: "rgba(220,38,38,0.15)", border: "2px solid rgba(220,38,38,0.4)", color: "#f87171", fontSize: 12, fontWeight: 600,
+                          cursor: "pointer", animation: "pulseDot 1.5s infinite",
                         }}>
                         <span>■</span>
                         <div style={{ display: "flex", gap: 2, alignItems: "center", height: 18 }}>
                           {[...Array(7)].map((_, i) => (
-                            <div key={i} style={{ width: 3, borderRadius: 2, background: "#dc2626", animation: `barBounce ${0.35 + i * 0.07}s ease-in-out infinite alternate` }} />
+                            <div key={i} style={{ width: 3, borderRadius: 2, background: "#f87171", animation: `barBounce ${0.35 + i * 0.07}s ease-in-out infinite alternate` }} />
                           ))}
                         </div>
                         <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: 13 }}>{fmt(duration)}</span>
@@ -645,32 +1106,32 @@ function InspectionChecklist({ sectionKey, textRemarks, audioRemarks, photos, on
                       <button onClick={async (e) => { e.stopPropagation(); setRecordingItemId(item.id); await startRecording(); }}
                         style={{
                           display: "flex", alignItems: "center", gap: 7, padding: "9px 16px", borderRadius: 10,
-                          background: "#fff", border: "1.5px solid #e5e5e5", color: "#555", fontSize: 12, fontWeight: 600,
+                          background: "rgba(255,255,255,0.06)", border: "1.5px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.65)", fontSize: 12, fontWeight: 600,
                           cursor: "pointer", transition: "all 0.15s",
                         }}
-                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#2563eb"; e.currentTarget.style.color = "#2563eb"; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#e5e5e5"; e.currentTarget.style.color = "#555"; }}>
+                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(255,203,5,0.5)"; e.currentTarget.style.color = "#FFCB05"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; e.currentTarget.style.color = "rgba(255,255,255,0.65)"; }}>
                         <MicSvg size={15} /> Record Audio
                       </button>
                     )}
 
                     <label style={{
                       display: "flex", alignItems: "center", gap: 7, padding: "9px 16px", borderRadius: 10,
-                      background: needsPhoto ? "#fef2f2" : "#fff",
-                      border: `1.5px solid ${needsPhoto ? "#dc2626" : "#e5e5e5"}`,
-                      color: needsPhoto ? "#dc2626" : "#555", fontSize: 12, fontWeight: 600,
+                      background: needsPhoto ? "rgba(220,38,38,0.12)" : "rgba(255,255,255,0.06)",
+                      border: `1.5px solid ${needsPhoto ? "rgba(220,38,38,0.4)" : "rgba(255,255,255,0.12)"}`,
+                      color: needsPhoto ? "#f87171" : "rgba(255,255,255,0.65)", fontSize: 12, fontWeight: 600,
                       cursor: "pointer", transition: "all 0.15s",
                       boxShadow: needsPhoto ? "0 0 0 3px rgba(220,38,38,0.15)" : "none",
                     }}
                       onMouseEnter={(e) => {
                         if (needsPhoto) return;
-                        e.currentTarget.style.borderColor = "#7c3aed";
-                        e.currentTarget.style.color = "#7c3aed";
+                        e.currentTarget.style.borderColor = "rgba(124,58,237,0.5)";
+                        e.currentTarget.style.color = "#a78bfa";
                       }}
                       onMouseLeave={(e) => {
                         if (needsPhoto) return;
-                        e.currentTarget.style.borderColor = "#e5e5e5";
-                        e.currentTarget.style.color = "#555";
+                        e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)";
+                        e.currentTarget.style.color = "rgba(255,255,255,0.65)";
                       }}>
                       <CameraSvg size={15} /> Add Photo
                       <input type="file" accept="image/*" capture="environment" style={{ display: "none" }}
@@ -717,7 +1178,7 @@ function InspectionChecklist({ sectionKey, textRemarks, audioRemarks, photos, on
                         }
                         setExpandedItem(section.items[idx + 1].id);
                       }}
-                      style={{ padding: "7px 18px", borderRadius: 8, border: "none", background: "#2563eb", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                      style={{ padding: "7px 18px", borderRadius: 8, border: "none", background: "linear-gradient(135deg,#FFCB05,#f59e0b)", color: "#000", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
                       Next →
                     </button>
                   </div>
@@ -734,11 +1195,19 @@ function InspectionChecklist({ sectionKey, textRemarks, audioRemarks, photos, on
       </div>
 
       {/* Bottom bar */}
-      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#fff", borderTop: "1px solid #e5e7eb", padding: "12px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 90 }}>
+      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, padding: "12px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 90, background: "rgba(7,13,26,0.88)", backdropFilter: "blur(14px)", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
         <SyncBadge text={syncState} />
         <div style={{ display: "flex", gap: 10 }}>
-          <button onClick={onBack} style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid #ddd", background: "#fff", color: "#555", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Back to Sections</button>
-          <button onClick={onSaveProgress} style={{ padding: "9px 20px", borderRadius: 8, border: "none", background: "#2563eb", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Save Progress</button>
+          <button onClick={onBack} style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)", fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all 0.15s" }}
+            onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.12)"}
+            onMouseLeave={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.06)"}>
+            Back to Sections
+          </button>
+          <button onClick={onSaveProgress} style={{ padding: "9px 20px", borderRadius: 8, border: "none", background: "linear-gradient(135deg,#FFCB05,#f59e0b)", color: "#000", fontSize: 12, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 14px rgba(255,203,5,0.3)", transition: "all 0.15s" }}
+            onMouseEnter={(e) => e.currentTarget.style.boxShadow = "0 6px 22px rgba(255,203,5,0.5)"}
+            onMouseLeave={(e) => e.currentTarget.style.boxShadow = "0 4px 14px rgba(255,203,5,0.3)"}>
+            Save Progress
+          </button>
         </div>
       </div>
     </div>
@@ -762,138 +1231,179 @@ function SubmissionPage({ machine, textRemarks, photos, submitMeta, analysis, on
     })),
   ).filter((row) => row.remark || row.photos.length > 0 || row.ai);
 
-  return (
-    <div style={{ minHeight: "100vh", background: "#f4f5f7", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div style={{ background: "#fff", borderRadius: 20, padding: "36px 42px", textAlign: "center", border: "1px solid #e8e8e8", maxWidth: 900, width: "100%", boxShadow: "0 8px 32px rgba(0,0,0,0.06)" }}>
-        <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#f0fdf4", border: "2px solid #bbf7d0", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
-          <CheckSvg size={28} color="#16a34a" />
-        </div>
-        <h2 style={{ fontSize: 24, fontWeight: 800, color: "#111", margin: "0 0 6px" }}>Inspection Submitted</h2>
-        <p style={{ fontSize: 13, color: "#999", margin: "0 0 28px" }}>{machine.model} · S/N: {machine.serial}</p>
+  const statusMeta = (s: string) =>
+    s === "ok"
+      ? { label: "OK", bg: "#f0fdf4", color: "#16a34a", border: "#bbf7d0", dot: "#16a34a" }
+      : s === "critical"
+      ? { label: "CRITICAL", bg: "#fef2f2", color: "#dc2626", border: "#fecaca", dot: "#dc2626" }
+      : { label: "NEEDS ATTENTION", bg: "#fffbeb", color: "#b45309", border: "#fde68a", dot: "#f59e0b" };
 
-        <div style={{ display: "flex", gap: 14, justifyContent: "center", marginBottom: 24 }}>
+  const severityMeta = (s: string) =>
+    s === "high"
+      ? { bg: "#fef2f2", color: "#dc2626", border: "#fecaca", label: "HIGH" }
+      : s === "medium"
+      ? { bg: "#fffbeb", color: "#b45309", border: "#fde68a", label: "MED" }
+      : { bg: "#eff6ff", color: "#1d4ed8", border: "#bfdbfe", label: "LOW" };
+
+  const overallMeta = statusMeta(analysis?.overall_status ?? "ok");
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#f1f5f9", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "32px 16px" }}>
+      <div style={{ background: "#fff", borderRadius: 20, padding: "36px 40px", textAlign: "center", border: "1px solid #e2e8f0", maxWidth: 860, width: "100%", boxShadow: "0 12px 40px rgba(0,0,0,0.08)" }}>
+
+        {/* Header */}
+        <div style={{ width: 60, height: 60, borderRadius: "50%", background: "#f0fdf4", border: "2px solid #bbf7d0", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 18px" }}>
+          <CheckSvg size={26} color="#16a34a" />
+        </div>
+        <h2 style={{ fontSize: 22, fontWeight: 800, color: "#0f172a", margin: "0 0 4px" }}>Inspection Complete</h2>
+        <p style={{ fontSize: 13, color: "#94a3b8", margin: "0 0 28px" }}>{machine.model} · S/N: {machine.serial}</p>
+
+        {/* Summary stats */}
+        <div style={{ display: "flex", gap: 12, justifyContent: "center", marginBottom: 28 }}>
           {[
-            { l: "Observed Items", v: submitMeta?.summary?.total_items_with_observation ?? 0, c: "#2563eb" },
-            { l: "Text Notes", v: submitMeta?.summary?.text_remark_count ?? 0, c: "#16a34a" },
-            { l: "Audio Notes", v: submitMeta?.summary?.audio_remark_count ?? 0, c: "#dc2626" },
+            { l: "Observed", v: submitMeta?.summary?.total_items_with_observation ?? 0, c: "#2563eb", bg: "#eff6ff" },
+            { l: "Text Notes", v: submitMeta?.summary?.text_remark_count ?? 0, c: "#16a34a", bg: "#f0fdf4" },
+            { l: "Audio Notes", v: submitMeta?.summary?.audio_remark_count ?? 0, c: "#7c3aed", bg: "#f5f3ff" },
           ].map((s) => (
-            <div key={s.l} style={{ background: "#f9fafb", borderRadius: 12, padding: "12px 16px", minWidth: 65, border: "1px solid #f0f0f0" }}>
-              <div style={{ fontSize: 24, fontWeight: 800, color: s.c }}>{s.v}</div>
-              <div style={{ fontSize: 10, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.04em", fontWeight: 600, marginTop: 2 }}>{s.l}</div>
+            <div key={s.l} style={{ background: s.bg, borderRadius: 14, padding: "14px 20px", minWidth: 80, border: `1px solid ${s.c}22` }}>
+              <div style={{ fontSize: 26, fontWeight: 800, color: s.c }}>{s.v}</div>
+              <div style={{ fontSize: 10, color: s.c, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700, marginTop: 3, opacity: 0.75 }}>{s.l}</div>
             </div>
           ))}
         </div>
 
-        {/* AI Analysis results if available */}
+        {/* AI Overall Status Banner */}
         {analysis && (
-          <div style={{ border: "1px solid #e5e7eb", borderRadius: 12, padding: "16px 18px", background: "#f8fafc", marginBottom: 24, textAlign: "left" }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#111", marginBottom: 6, display: "flex", alignItems: "center", gap: 8 }}>
-              <span>🤖</span> AI Analysis
-              <span style={{
-                fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 6,
-                background: analysis.overall_status === "ok" ? "#f0fdf4" : analysis.overall_status === "critical" ? "#fef2f2" : "#FFFBEB",
-                color: analysis.overall_status === "ok" ? "#16a34a" : analysis.overall_status === "critical" ? "#dc2626" : "#92400e",
-                border: `1px solid ${analysis.overall_status === "ok" ? "#bbf7d0" : analysis.overall_status === "critical" ? "#fecaca" : "#FDE68A"}`,
-                textTransform: "uppercase",
-              }}>{analysis.overall_status}</span>
+          <div style={{ borderRadius: 14, padding: "16px 20px", background: overallMeta.bg, border: `1px solid ${overallMeta.border}`, marginBottom: 28, display: "flex", alignItems: "center", gap: 14, textAlign: "left" }}>
+            <div style={{ width: 10, height: 10, borderRadius: "50%", background: overallMeta.dot, flexShrink: 0, boxShadow: `0 0 0 3px ${overallMeta.border}` }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: overallMeta.color, textTransform: "uppercase", letterSpacing: "0.08em" }}>Overall Status</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: overallMeta.color }}>{overallMeta.label}</div>
             </div>
-            <div style={{ fontSize: 12, color: "#666" }}>Analyzed {analysis.analyzed_checks} checks with multimodal evidence</div>
+            <div style={{ fontSize: 12, color: overallMeta.color, opacity: 0.8, textAlign: "right" }}>
+              <div style={{ fontWeight: 700 }}>{analysis.analyzed_checks} checks</div>
+              <div>AI-analyzed</div>
+            </div>
           </div>
         )}
 
+        {/* Detailed Report */}
         {reportRows.length > 0 && (
-          <div style={{ border: "1px solid #e5e7eb", borderRadius: 12, padding: "16px 18px", background: "#fff", marginBottom: 24, textAlign: "left", maxHeight: 380, overflowY: "auto" }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: "#111", marginBottom: 14 }}>Detailed Report</div>
-            <div style={{ display: "grid", gap: 12 }}>
-              {reportRows.map((row) => (
-                <div key={row.id} style={{ border: "1px solid #e5e7eb", borderRadius: 10, padding: 12, background: "#fafafa" }}>
-                  {(() => {
-                    const ai = row.ai?.analysis;
-                    const findings = Array.isArray(ai?.findings) ? ai.findings : [];
-                    const visibleFindings = findings.filter((finding: any) =>
-                      !isUnknownLike(finding?.component) &&
-                      !isUnknownLike(finding?.issue) &&
-                      !isUnknownLike(finding?.evidence) &&
-                      !isUnknownLike(finding?.action),
-                    );
-                    const followUps = Array.isArray(ai?.follow_up_questions)
-                      ? ai.follow_up_questions.filter((question: any) => typeof question === "string" && !isUnknownLike(question))
-                      : [];
+          <div style={{ border: "1px solid #e2e8f0", borderRadius: 16, background: "#f8fafc", marginBottom: 28, textAlign: "left", overflow: "hidden" }}>
+            <div style={{ padding: "14px 20px", borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "#0f172a" }}>Detailed Report</div>
+              <div style={{ marginLeft: "auto", fontSize: 11, color: "#94a3b8", fontWeight: 600 }}>{reportRows.length} items</div>
+            </div>
 
-                    return (
-                      <>
-                  <div style={{ marginBottom: 8 }}>
-                    <div>
-                      <div style={{ fontSize: 11, color: "#999", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>{row.sectionTitle}</div>
-                      <div style={{ fontSize: 13, color: "#111", fontWeight: 700 }}>{row.name}</div>
+            <div style={{ maxHeight: 520, overflowY: "auto", padding: "16px 20px", display: "grid", gap: 14 }}>
+              {reportRows.map((row) => {
+                const ai = row.ai?.analysis;
+                const findings = Array.isArray(ai?.findings) ? ai.findings : [];
+                const visibleFindings = findings.filter((f: any) =>
+                  !isUnknownLike(f?.component) && !isUnknownLike(f?.issue) && !isUnknownLike(f?.evidence) && !isUnknownLike(f?.action),
+                );
+                const followUps = Array.isArray(ai?.follow_up_questions)
+                  ? ai.follow_up_questions.filter((q: any) => typeof q === "string" && !isUnknownLike(q))
+                  : [];
+                const sm = ai?.status ? statusMeta(ai.status) : null;
+
+                return (
+                  <div key={row.id} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden" }}>
+                    {/* Row header */}
+                    <div style={{ padding: "12px 16px", borderBottom: sm ? `2px solid ${sm.border}` : "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>{row.sectionTitle}</div>
+                        <div style={{ fontSize: 14, color: "#0f172a", fontWeight: 700, marginTop: 1 }}>{row.name}</div>
+                      </div>
+                      {sm && (
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                          {typeof ai?.confidence === "number" && (
+                            <RadialProgress value={ai.confidence} size={62} stroke={6} />
+                          )}
+                          <span style={{ fontSize: 10, fontWeight: 700, color: sm.color, background: sm.bg, border: `1px solid ${sm.border}`, borderRadius: 6, padding: "2px 7px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                            {sm.label}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ padding: "12px 16px", display: "grid", gap: 10 }}>
+                      {/* Comment */}
+                      {row.remark && (
+                        <div style={{ fontSize: 12, color: "#475569", lineHeight: 1.6, background: "#f8fafc", borderRadius: 8, padding: "8px 10px", borderLeft: "3px solid #cbd5e1" }}>
+                          {row.remark}
+                        </div>
+                      )}
+
+                      {/* Photos */}
+                      {row.photos.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Evidence Photos ({row.photos.length})</div>
+                          <ReportPhotoStrip files={row.photos} />
+                        </div>
+                      )}
+
+                      {/* AI Summary */}
+                      {ai?.summary && (
+                        <div style={{ fontSize: 12, color: "#334155", lineHeight: 1.6 }}>
+                          {ai.summary}
+                        </div>
+                      )}
+
+                      {/* Findings */}
+                      {visibleFindings.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Findings</div>
+                          <div style={{ display: "grid", gap: 8 }}>
+                            {visibleFindings.map((f: any, i: number) => {
+                              const sv = severityMeta(f.severity);
+                              return (
+                                <div key={`${row.id}-f${i}`} style={{ background: "#f8fafc", border: `1px solid ${sv.border}`, borderRadius: 10, overflow: "hidden" }}>
+                                  <div style={{ background: sv.bg, padding: "7px 12px", display: "flex", alignItems: "center", gap: 8 }}>
+                                    <span style={{ fontSize: 10, fontWeight: 800, color: sv.color, background: "#fff", border: `1px solid ${sv.border}`, borderRadius: 4, padding: "1px 6px", letterSpacing: "0.06em" }}>{sv.label}</span>
+                                    <span style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>{f.component}</span>
+                                  </div>
+                                  <div style={{ padding: "10px 12px", display: "grid", gap: 6 }}>
+                                    <div style={{ fontSize: 12, color: "#1e293b", fontWeight: 600 }}>{f.issue}</div>
+                                    <div style={{ fontSize: 11, color: "#64748b", lineHeight: 1.5, background: "#f1f5f9", borderRadius: 6, padding: "6px 8px" }}>
+                                      <span style={{ fontWeight: 700, color: "#475569" }}>Evidence: </span>{f.evidence}
+                                    </div>
+                                    <div style={{ fontSize: 11, color: "#0f172a", lineHeight: 1.5, background: "#fefce8", border: "1px solid #fde68a", borderRadius: 6, padding: "6px 8px" }}>
+                                      <span style={{ fontWeight: 700 }}>Action: </span>{f.action}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Follow-up questions */}
+                      {followUps.length > 0 && (
+                        <div style={{ background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 10, padding: "10px 12px" }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "#0369a1", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Follow-up Questions</div>
+                          <div style={{ display: "grid", gap: 4 }}>
+                            {followUps.map((q: string, i: number) => (
+                              <div key={i} style={{ fontSize: 12, color: "#0c4a6e", lineHeight: 1.5, display: "flex", gap: 6 }}>
+                                <span style={{ fontWeight: 700, flexShrink: 0 }}>{i + 1}.</span>
+                                <span>{q}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
-
-                  {row.remark && (
-                    <div style={{ fontSize: 12, color: "#444", marginBottom: 8, lineHeight: 1.5 }}>
-                      <strong>Comment:</strong> {row.remark}
-                    </div>
-                  )}
-
-                  {row.photos.length > 0 && (
-                    <div style={{ marginBottom: 8 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: "#666", marginBottom: 6 }}>Photos ({row.photos.length})</div>
-                      <ReportPhotoStrip files={row.photos} />
-                    </div>
-                  )}
-
-                        {ai?.summary && (
-                          <div style={{ fontSize: 12, color: "#334155", lineHeight: 1.5, marginBottom: 6 }}>
-                            <strong>summary:</strong> {ai.summary}
-                          </div>
-                        )}
-
-                        {ai?.status && (
-                          <div style={{ fontSize: 12, color: "#334155", lineHeight: 1.5 }}>
-                            <strong>status:</strong> {ai.status}
-                          </div>
-                        )}
-
-                        {typeof ai?.confidence === "number" && (
-                          <div style={{ fontSize: 12, color: "#334155", lineHeight: 1.5, marginBottom: 6 }}>
-                            <strong>confidence:</strong> {ai.confidence.toFixed(2)}
-                          </div>
-                        )}
-
-                        {visibleFindings.length > 0 && (
-                          <div style={{ marginBottom: 8 }}>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: "#666", marginBottom: 6 }}>findings</div>
-                            <div style={{ display: "grid", gap: 6 }}>
-                              {visibleFindings.map((finding: any, findingIndex: number) => (
-                                <div key={`${row.id}-finding-${findingIndex}`} style={{ fontSize: 12, color: "#334155", lineHeight: 1.5, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 10px" }}>
-                                  <div><strong>component:</strong> {finding.component}</div>
-                                  <div><strong>issue:</strong> {finding.issue}</div>
-                                  <div><strong>severity:</strong> {finding.severity}</div>
-                                  <div><strong>evidence:</strong> {finding.evidence}</div>
-                                  <div><strong>action:</strong> {finding.action}</div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {followUps.length > 0 && (
-                          <div style={{ fontSize: 12, color: "#334155", lineHeight: 1.5 }}>
-                            <strong>follow_up_questions:</strong> {followUps.join(" | ")}
-                          </div>
-                        )}
-                      </>
-                    );
-                  })()}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
 
         <button onClick={onBack} style={{
-          padding: "11px 36px", borderRadius: 10, background: "#2563eb", color: "#fff",
-          border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer",
+          padding: "12px 40px", borderRadius: 10, background: "#2563eb", color: "#fff",
+          border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", letterSpacing: "0.02em",
         }}>
           Back to Machines
         </button>
