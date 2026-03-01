@@ -68,7 +68,7 @@ const SECTIONS = [
     key: "engine",
     title: "Engine Compartment",
     shortTitle: "Engine",
-    description: "Engine bay, platforms & fluid level checks",
+    description: "Engine bay, platforms & fluid level checks of all visible components",
     emoji: "⚙️",
     items: [
       { id: "e1", name: "All Hoses", lookFor: "Cracks, wear spots, leaks" },
@@ -131,30 +131,6 @@ function isUnknownLike(value: unknown): boolean {
 }
 
 /* ═══════════════════════ SVG ICONS ═══════════════════════ */
-
-function RadialProgress({ value, size = 72, stroke = 7 }: { value: number; size?: number; stroke?: number }) {
-  const pct = Math.round(Math.max(0, Math.min(1, value)) * 100);
-  const r = (size - stroke) / 2;
-  const circ = 2 * Math.PI * r;
-  const offset = circ - (pct / 100) * circ;
-  const color = pct >= 75 ? "#16a34a" : pct >= 45 ? "#f59e0b" : "#dc2626";
-  const trackColor = pct >= 75 ? "#dcfce7" : pct >= 45 ? "#fef3c7" : "#fee2e2";
-  return (
-    <svg width={size} height={size} style={{ display: "block" }}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={trackColor} strokeWidth={stroke} />
-      <circle
-        cx={size / 2} cy={size / 2} r={r}
-        fill="none" stroke={color} strokeWidth={stroke}
-        strokeLinecap="round"
-        strokeDasharray={circ}
-        strokeDashoffset={offset}
-        transform={`rotate(-90 ${size / 2} ${size / 2})`}
-        style={{ transition: "stroke-dashoffset 0.5s ease" }}
-      />
-      <text x={size / 2} y={size / 2 - 1} textAnchor="middle" dominantBaseline="central" fontSize={size * 0.22} fontWeight="800" fill={color}>{pct}%</text>
-    </svg>
-  );
-}
 
 /* ═══════════════════════ CATERPILLAR LOGO ═══════════════════════ */
 function CaterpillarLogo({ dark = false }: { dark?: boolean }) {
@@ -220,6 +196,14 @@ function useGlobalStyles() {
         0%,100% { transform:scale(1); opacity:1; }
         50%      { transform:scale(1.6); opacity:0.5; }
       }
+      @keyframes recordPulse {
+        0%,100% { transform: scale(1); }
+        50% { transform: scale(1.03); }
+      }
+      @keyframes barBounce {
+        from { transform: scaleY(0.45); opacity: 0.55; }
+        to { transform: scaleY(1); opacity: 1; }
+      }
       @keyframes scanLine {
         0%   { top:0%; opacity:0.7; }
         100% { top:100%; opacity:0; }
@@ -260,6 +244,28 @@ function useGlobalStyles() {
         backdrop-filter: blur(14px) saturate(160%);
         -webkit-backdrop-filter: blur(14px) saturate(160%);
         border: 1px solid rgba(255,255,255,0.6);
+      }
+      @media print {
+        @page { size: A4; margin: 12mm; }
+        body { background: #fff !important; }
+        .no-print { display: none !important; }
+        .print-page {
+          min-height: auto !important;
+          padding: 0 !important;
+          background: #fff !important;
+        }
+        .print-card {
+          max-width: 100% !important;
+          width: 100% !important;
+          border: none !important;
+          border-radius: 0 !important;
+          box-shadow: none !important;
+          padding: 0 !important;
+        }
+        .print-scroll {
+          max-height: none !important;
+          overflow: visible !important;
+        }
       }
     `;
     document.head.appendChild(el);
@@ -347,6 +353,15 @@ const MicSvg = ({ size = 16 }: { size?: number }) => (
 const CameraSvg = ({ size = 16 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" />
+  </svg>
+);
+const TrashSvg = ({ size = 15 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="3 6 5 6 21 6" />
+    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+    <path d="M10 11v6" />
+    <path d="M14 11v6" />
+    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
   </svg>
 );
 const ChevronDown = () => (
@@ -585,9 +600,10 @@ function AudioPlayback({ audio, onDelete }: { audio: { blob: Blob; duration: num
         <div style={{ width: playing ? "100%" : "0%", height: "100%", background: "#2563eb", borderRadius: 2, transition: playing ? `width ${audio.duration}s linear` : "none" }} />
       </div>
       <span style={{ fontSize: 12, color: "#2563eb", fontFamily: "monospace", fontWeight: 600, flexShrink: 0 }}>{fmt(audio.duration)}</span>
-      <button onClick={onDelete} style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", fontSize: 12, opacity: 0.6 }}
+      <button onClick={onDelete} aria-label="Delete audio" title="Delete audio"
+        style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", opacity: 0.6, display: "flex", alignItems: "center", padding: 2 }}
         onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")} onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.6")}>
-        Delete
+        <TrashSvg />
       </button>
     </div>
   );
@@ -692,7 +708,7 @@ function MachineSelectPage({ onSelect }: { onSelect: (m: any) => void }) {
 
         <div style={{ marginTop: 28 }}>
           <h1 className="shimmer-text" style={{ fontSize: 36, fontWeight: 900, margin: "0 0 10px", letterSpacing: "-0.025em", animation: "fadeInUp 0.7s ease both" }}>
-            CAT Safety Inspection
+            Safety Inspection
           </h1>
           <p style={{ fontSize: 15, color: "rgba(255,255,255,0.45)", margin: 0, animation: "fadeInUp 0.7s 0.15s ease both", fontWeight: 400 }}>
             AI-powered pre-shift inspection · Select your machine to begin
@@ -1091,12 +1107,16 @@ function InspectionChecklist({ sectionKey, textRemarks, audioRemarks, photos, on
                         style={{
                           display: "flex", alignItems: "center", gap: 10, padding: "9px 16px", borderRadius: 10,
                           background: "rgba(220,38,38,0.15)", border: "2px solid rgba(220,38,38,0.4)", color: "#f87171", fontSize: 12, fontWeight: 600,
-                          cursor: "pointer", animation: "pulseDot 1.5s infinite",
+                          cursor: "pointer", animation: "recordPulse 1.4s ease-in-out infinite",
                         }}>
                         <span>■</span>
                         <div style={{ display: "flex", gap: 2, alignItems: "center", height: 18 }}>
-                          {[...Array(7)].map((_, i) => (
-                            <div key={i} style={{ width: 3, borderRadius: 2, background: "#f87171", animation: `barBounce ${0.35 + i * 0.07}s ease-in-out infinite alternate` }} />
+                          {[8, 14, 10, 16, 11, 13, 9].map((barHeight, i) => (
+                            <div key={i} style={{
+                              width: 3, height: barHeight, borderRadius: 2, background: "#f87171",
+                              transformOrigin: "bottom center",
+                              animation: `barBounce ${0.35 + i * 0.07}s ease-in-out infinite alternate`,
+                            }} />
                           ))}
                         </div>
                         <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: 13 }}>{fmt(duration)}</span>
@@ -1246,30 +1266,90 @@ function SubmissionPage({ machine, textRemarks, photos, submitMeta, analysis, on
       : { bg: "#eff6ff", color: "#1d4ed8", border: "#bfdbfe", label: "LOW" };
 
   const overallMeta = statusMeta(analysis?.overall_status ?? "ok");
+  const statusCounts = (analysis?.check_results ?? []).reduce(
+    (acc: { critical: number; needs_attention: number; ok: number; unknown: number }, result: any) => {
+      const status = result?.analysis?.status;
+      if (status === "critical") acc.critical += 1;
+      else if (status === "needs_attention") acc.needs_attention += 1;
+      else if (status === "ok") acc.ok += 1;
+      else acc.unknown += 1;
+      return acc;
+    },
+    { critical: 0, needs_attention: 0, ok: 0, unknown: 0 },
+  );
+  const submittedAt = submitMeta?.submitted_at ? new Date(submitMeta.submitted_at) : new Date();
+  const generatedAt = new Date();
+  const metaLeft = [
+    { label: "Inspection Number", value: (submitMeta?.session_id ?? "").slice(0, 10).toUpperCase() || "N/A" },
+    { label: "Serial Number", value: machine.serial ?? "N/A" },
+    { label: "Make", value: "CATERPILLAR" },
+    { label: "Model", value: machine.model ?? "N/A" },
+    { label: "Equipment Family", value: "Excavator" },
+    { label: "Asset ID", value: machine.id?.toUpperCase?.() ?? "N/A" },
+    { label: "SMU", value: `${machine.hours ?? "N/A"} Hours` },
+  ];
+  const metaRight = [
+    { label: "Work Order", value: `WO-${(submitMeta?.session_id ?? "000000").slice(0, 6).toUpperCase()}` },
+    { label: "Completed On", value: submittedAt.toLocaleString() },
+    { label: "Inspector", value: "Field Officer 01" },
+    { label: "PDF Generated On", value: generatedAt.toLocaleDateString() },
+    { label: "Location", value: "East Peoria, IL 61611" },
+  ];
+  const onDownloadPdf = () => {
+    window.print();
+  };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f1f5f9", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "32px 16px" }}>
-      <div style={{ background: "#fff", borderRadius: 20, padding: "36px 40px", textAlign: "center", border: "1px solid #e2e8f0", maxWidth: 860, width: "100%", boxShadow: "0 12px 40px rgba(0,0,0,0.08)" }}>
+    <div className="print-page" style={{ minHeight: "100vh", background: "#f1f5f9", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "32px 16px" }}>
+      <div className="print-card" style={{ background: "#fff", borderRadius: 20, padding: "36px 40px", textAlign: "center", border: "1px solid #e2e8f0", maxWidth: 860, width: "100%", boxShadow: "0 12px 40px rgba(0,0,0,0.08)" }}>
 
-        {/* Header */}
-        <div style={{ width: 60, height: 60, borderRadius: "50%", background: "#f0fdf4", border: "2px solid #bbf7d0", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 18px" }}>
-          <CheckSvg size={26} color="#16a34a" />
-        </div>
-        <h2 style={{ fontSize: 22, fontWeight: 800, color: "#0f172a", margin: "0 0 4px" }}>Inspection Complete</h2>
-        <p style={{ fontSize: 13, color: "#94a3b8", margin: "0 0 28px" }}>{machine.model} · S/N: {machine.serial}</p>
-
-        {/* Summary stats */}
-        <div style={{ display: "flex", gap: 12, justifyContent: "center", marginBottom: 28 }}>
-          {[
-            { l: "Observed", v: submitMeta?.summary?.total_items_with_observation ?? 0, c: "#2563eb", bg: "#eff6ff" },
-            { l: "Text Notes", v: submitMeta?.summary?.text_remark_count ?? 0, c: "#16a34a", bg: "#f0fdf4" },
-            { l: "Audio Notes", v: submitMeta?.summary?.audio_remark_count ?? 0, c: "#7c3aed", bg: "#f5f3ff" },
-          ].map((s) => (
-            <div key={s.l} style={{ background: s.bg, borderRadius: 14, padding: "14px 20px", minWidth: 80, border: `1px solid ${s.c}22` }}>
-              <div style={{ fontSize: 26, fontWeight: 800, color: s.c }}>{s.v}</div>
-              <div style={{ fontSize: 10, color: s.c, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700, marginTop: 3, opacity: 0.75 }}>{s.l}</div>
+        {/* Report header */}
+        <div style={{ textAlign: "left", marginBottom: 26 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 14, alignItems: "flex-start", marginBottom: 14 }}>
+            <div>
+              <h2 style={{ fontSize: "clamp(22px, 3vw, 34px)", fontWeight: 900, color: "#0f172a", margin: "0 0 2px", letterSpacing: "-0.015em" }}>
+                {machine.model}: Safety & Maintenance
+              </h2>
+              <div style={{ fontSize: 14, color: "#475569", fontWeight: 500 }}>Daily</div>
             </div>
-          ))}
+            <div style={{ display: "flex", border: "1px solid #e5e7eb", borderRadius: 4, overflow: "hidden", flexShrink: 0 }}>
+              <div style={{ background: "#f4c21f", color: "#111827", padding: "9px 14px", fontSize: "clamp(14px, 1.8vw, 22px)", fontWeight: 900, letterSpacing: "0.03em" }}>CATSENSE</div>
+              <div style={{ background: "#0f172a", color: "#fff", padding: "9px 11px", fontSize: "clamp(14px, 1.7vw, 20px)", fontWeight: 900, letterSpacing: "0.03em" }}>CAT</div>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 18, marginBottom: 14 }}>
+            {[
+              { color: "#dc2626", value: statusCounts.critical },
+              { color: "#f59e0b", value: statusCounts.needs_attention },
+              { color: "#16a34a", value: statusCounts.ok },
+              { color: "#9ca3af", value: statusCounts.unknown },
+            ].map((item, idx) => (
+              <div key={idx} style={{ display: "flex", alignItems: "center", gap: 6, color: item.color, fontWeight: 800, fontSize: 16 }}>
+                <span style={{ width: 10, height: 10, borderRadius: "50%", background: item.color, display: "inline-block" }} />
+                <span>{item.value}</span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "6px 24px", marginBottom: 4 }}>
+            <div style={{ display: "grid", gap: 8 }}>
+              {metaLeft.map((entry) => (
+                <div key={entry.label} style={{ display: "grid", gridTemplateColumns: "minmax(130px, 180px) 1fr", alignItems: "baseline", columnGap: 8 }}>
+                  <div style={{ fontSize: "clamp(12px, 1.2vw, 15px)", color: "#6b7280", fontWeight: 500 }}>{entry.label}</div>
+                  <div style={{ fontSize: "clamp(14px, 1.35vw, 17px)", color: "#111827", fontWeight: 500 }}>{entry.value}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: "grid", gap: 8 }}>
+              {metaRight.map((entry) => (
+                <div key={entry.label} style={{ display: "grid", gridTemplateColumns: "minmax(130px, 180px) 1fr", alignItems: "baseline", columnGap: 8 }}>
+                  <div style={{ fontSize: "clamp(12px, 1.2vw, 15px)", color: "#6b7280", fontWeight: 500 }}>{entry.label}</div>
+                  <div style={{ fontSize: "clamp(14px, 1.35vw, 17px)", color: "#111827", fontWeight: 500 }}>{entry.value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* AI Overall Status Banner */}
@@ -1295,7 +1375,7 @@ function SubmissionPage({ machine, textRemarks, photos, submitMeta, analysis, on
               <div style={{ marginLeft: "auto", fontSize: 11, color: "#94a3b8", fontWeight: 600 }}>{reportRows.length} items</div>
             </div>
 
-            <div style={{ maxHeight: 520, overflowY: "auto", padding: "16px 20px", display: "grid", gap: 14 }}>
+            <div className="print-scroll" style={{ maxHeight: 520, overflowY: "auto", padding: "16px 20px", display: "grid", gap: 14 }}>
               {reportRows.map((row) => {
                 const ai = row.ai?.analysis;
                 const findings = Array.isArray(ai?.findings) ? ai.findings : [];
@@ -1316,10 +1396,7 @@ function SubmissionPage({ machine, textRemarks, photos, submitMeta, analysis, on
                         <div style={{ fontSize: 14, color: "#0f172a", fontWeight: 700, marginTop: 1 }}>{row.name}</div>
                       </div>
                       {sm && (
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                          {typeof ai?.confidence === "number" && (
-                            <RadialProgress value={ai.confidence} size={62} stroke={6} />
-                          )}
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 88 }}>
                           <span style={{ fontSize: 10, fontWeight: 700, color: sm.color, background: sm.bg, border: `1px solid ${sm.border}`, borderRadius: 6, padding: "2px 7px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                             {sm.label}
                           </span>
@@ -1401,12 +1478,59 @@ function SubmissionPage({ machine, textRemarks, photos, submitMeta, analysis, on
           </div>
         )}
 
-        <button onClick={onBack} style={{
-          padding: "12px 40px", borderRadius: 10, background: "#2563eb", color: "#fff",
-          border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", letterSpacing: "0.02em",
-        }}>
-          Back to Machines
-        </button>
+        <div className="no-print" style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+          <button onClick={onDownloadPdf} style={{
+            padding: "12px 22px", borderRadius: 10, background: "linear-gradient(135deg,#16a34a,#22c55e)", color: "#fff",
+            border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", letterSpacing: "0.02em",
+          }}>
+            Download PDF
+          </button>
+          <button onClick={onBack} style={{
+            padding: "12px 22px", borderRadius: 10, background: "#2563eb", color: "#fff",
+            border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", letterSpacing: "0.02em",
+          }}>
+            Back to Machines
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReportLoadingPage({ machine, syncState }: { machine: any; syncState: string }) {
+  const shimmerBlock: React.CSSProperties = {
+    background: "linear-gradient(90deg, #e2e8f0 0%, #f8fafc 50%, #e2e8f0 100%)",
+    backgroundSize: "200% 100%",
+    animation: "shimmer 1.6s linear infinite",
+    borderRadius: 10,
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#f1f5f9", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "32px 16px" }}>
+      <div style={{ background: "#fff", borderRadius: 20, padding: "32px", border: "1px solid #e2e8f0", maxWidth: 860, width: "100%", boxShadow: "0 12px 40px rgba(0,0,0,0.08)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 16 }}>
+          <div>
+            <div style={{ ...shimmerBlock, width: 360, maxWidth: "72vw", height: 34, marginBottom: 10 }} />
+            <div style={{ ...shimmerBlock, width: 190, height: 14 }} />
+          </div>
+          <div style={{ ...shimmerBlock, width: 170, height: 44 }} />
+        </div>
+
+        <div style={{ ...shimmerBlock, width: "100%", height: 58, marginBottom: 18 }} />
+        <div style={{ fontSize: 13, color: "#64748b", fontWeight: 600, marginBottom: 20 }}>
+          Generating report for {machine?.model ?? "equipment"}... {syncState}
+        </div>
+
+        {[1, 2, 3, 4].map((n) => (
+          <div key={n} style={{ border: "1px solid #e2e8f0", borderRadius: 12, padding: 14, marginBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginBottom: 10 }}>
+              <div style={{ ...shimmerBlock, width: "48%", height: 16 }} />
+              <div style={{ ...shimmerBlock, width: 84, height: 26 }} />
+            </div>
+            <div style={{ ...shimmerBlock, width: "100%", height: 44, marginBottom: 8 }} />
+            <div style={{ ...shimmerBlock, width: "82%", height: 30 }} />
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -1489,6 +1613,7 @@ export default function SafetyInspectionApp() {
   async function onSubmit(): Promise<void> {
     try {
       requireSession();
+      setPage("submitting");
       setSyncState("Submitting inspection...");
       const submitRes = await submitInspection(WORKER_URL, sessionId);
       setSubmitMeta(submitRes);
@@ -1504,6 +1629,7 @@ export default function SafetyInspectionApp() {
       setPage("submitted");
     } catch (err) {
       setSyncState(err instanceof Error ? err.message : "Failed to submit");
+      setPage("dashboard");
     }
   }
 
@@ -1570,6 +1696,9 @@ export default function SafetyInspectionApp() {
       )}
       {page === "submitted" && (
         <SubmissionPage machine={selectedMachine} textRemarks={textRemarks} photos={photos} submitMeta={submitMeta} analysis={analysis} onBack={resetAll} />
+      )}
+      {page === "submitting" && (
+        <ReportLoadingPage machine={selectedMachine} syncState={syncState} />
       )}
     </>
   );
