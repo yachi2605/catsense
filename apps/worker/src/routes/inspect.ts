@@ -70,9 +70,9 @@ export async function handleInspect(request: Request, env: Env): Promise<Respons
       apiKey: env.GEMINI_API_KEY,
       model: env.GEMINI_MODEL ?? "gemini-2.5-flash",
     },
-    prompt,
-    images: [image],
-    audios: [audio],
+    prompt: evidencePrompt,
+    image,
+    audioTranscript,
   });
   const report = buildInspectionReport(evidence);
 
