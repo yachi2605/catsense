@@ -1,4 +1,3 @@
-import { handleInspect } from "./routes/inspect";
 import {
   handleAnalyzeInspectionSession,
   handleCreateInspectionSession,
@@ -42,10 +41,6 @@ export default {
     }
 
     try {
-      if (request.method === "POST" && url.pathname === "/api/inspect") {
-        return await handleInspect(request, env);
-      }
-
       if (request.method === "POST" && url.pathname === "/api/inspection-sessions") {
         return await handleCreateInspectionSession(request, env);
       }
@@ -128,10 +123,6 @@ export default {
 };
 
 function isCorsPath(pathname: string): boolean {
-  if (pathname === "/api/inspect") {
-    return true;
-  }
-
   if (pathname === "/api/inspection-sessions") {
     return true;
   }

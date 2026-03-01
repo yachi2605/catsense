@@ -1,10 +1,9 @@
 # Worker Service (`apps/worker`)
 
 Cloudflare Worker API for:
-- `POST /api/inspect` (single-shot)
 - `POST /api/inspection-sessions` (create session)
 - `POST /api/inspection-sessions/:session_id/evidence` (upload image/audio per check; supports `audio/webm`)
-- `POST /api/inspection-sessions/:session_id/items/:check_id` (upsert item status/remarks)
+- `POST /api/inspection-sessions/:session_id/items/:check_id` (upsert item remarks metadata)
 - `POST /api/inspection-sessions/:session_id/analyze` (analyze all checks)
 - `POST /api/inspection-sessions/:session_id/submit` (finalize inspection summary)
 - `GET /api/inspection-sessions/:session_id` (session status)
@@ -52,29 +51,19 @@ Or directly:
 pnpm --filter worker dev
 ```
 
-## 4) Test endpoint
+## 4) Session-based flow (multi-photo + multi-audio)
 
-Use multipart form with `equipment_id`, `image`, `audio`:
-
-```bash
-curl -X POST http://127.0.0.1:8787/api/inspect \
-  -F "equipment_id=EQ-1234" \
-  -F "image=@test/HydraulicFluidTank.jpg;type=image/jpeg" \
-  -F "audio=@test/fluid.wav;type=audio/wav"
-```
-
-Expected behavior:
-- Returns JSON with `equipment_id`, uploaded object keys, and `analysis`.
-- Returns `400` if files/types/required fields are invalid.
-
-### Session-based flow (multi-photo + multi-audio)
+Supported machine serial numbers for session creation:
+- `ZAR00512`
+- `DKS01847`
+- `FMG02291`
 
 1. Create session:
 
 ```bash
 curl -X POST http://127.0.0.1:8787/api/inspection-sessions \
   -H "content-type: application/json" \
-  -d '{"equipment_id":"EQ-1234","checklist_id":"safety-v1","inspector_id":"officer-01"}'
+  -d '{"serial_number":"ZAR00512","checklist_id":"safety-v1","inspector_id":"officer-01"}'
 ```
 
 2. Upload evidence for a check (`file` can be image or audio):
@@ -105,12 +94,12 @@ curl -X POST http://127.0.0.1:8787/api/inspection-sessions/<SESSION_ID>/analyze
 curl http://127.0.0.1:8787/api/inspection-sessions/<SESSION_ID>
 ```
 
-5. Save item status/text remarks (maps to `statuses` + `textRemarks` in your frontend):
+5. Save item text remarks:
 
 ```bash
 curl -X POST http://127.0.0.1:8787/api/inspection-sessions/<SESSION_ID>/items/fluid_level \
   -H "content-type: application/json" \
-  -d '{"status":"fail","text_remark":"Leak near lower hose clamp."}'
+  -d '{"text_remark":"Leak near lower hose clamp."}'
 ```
 
 6. Save audio duration metadata for the same item:

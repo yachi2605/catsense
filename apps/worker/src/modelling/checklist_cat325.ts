@@ -1,37 +1,94 @@
 export const CAT325_CHECKLIST = [
+  // =========================
+  // FROM THE GROUND
+  // =========================
   {
     section: "FROM_THE_GROUND",
-    item: "Underneath of machine",
-    looking_for: ["final drive leaks", "swing drive leaks", "damage"]
+    item: "Bucket, GET",
+    looking_for: [
+      "excessive wear",
+      "damage",
+      "cracks"
+    ]
   },
   {
     section: "FROM_THE_GROUND",
-    item: "Hydraulic oil tank",
-    looking_for: ["fluid level", "damage", "leaks"]
+    item: "Bucket Cylinder & Linkage",
+    looking_for: [
+      "excessive wear",
+      "damage",
+      "leaks",
+      "needs lubrication"
+    ]
   },
   {
     section: "FROM_THE_GROUND",
-    item: "Radiator / oil cooler / AC condenser",
-    looking_for: ["fin blockage", "leaks"]
+    item: "Stick, Cylinder",
+    looking_for: [
+      "wear",
+      "damage",
+      "leaks",
+      "needs lubrication"
+    ]
+  },
+
+  // =========================
+  // ENGINE COMPARTMENT
+  // =========================
+  {
+    section: "ENGINE_COMPARTMENT",
+    item: "Engine Oil",
+    looking_for: [
+      "fluid level low",
+      "leaks"
+    ]
   },
   {
     section: "ENGINE_COMPARTMENT",
-    item: "All hoses",
-    looking_for: ["cracks", "wear spots", "leaks"]
+    item: "Swing Gear Oil",
+    looking_for: [
+      "fluid level low",
+      "leaks"
+    ]
   },
   {
     section: "ENGINE_COMPARTMENT",
-    item: "All belts",
-    looking_for: ["tightness", "wear", "cracks"]
+    item: "Fuel Tank",
+    looking_for: [
+      "fuel level low",
+      "damage",
+      "leaks"
+    ]
+  },
+
+  // =========================
+  // INSIDE THE CAB
+  // =========================
+  {
+    section: "INSIDE_CAB",
+    item: "Seat",
+    looking_for: [
+      "adjustment issue",
+      "unable to reach pedals",
+      "damage"
+    ]
   },
   {
     section: "INSIDE_CAB",
-    item: "Seat belt & mounting",
-    looking_for: ["damage", "wear", "proper latch"]
+    item: "Seat Belt & Mounting",
+    looking_for: [
+      "damage",
+      "wear",
+      "improper latch",
+      "expired"
+    ]
   },
   {
     section: "INSIDE_CAB",
-    item: "ROPS",
-    looking_for: ["damage", "loose bolts"]
+    item: "Horn, Travel Alarm, Lights",
+    looking_for: [
+      "not functioning",
+      "warning device failure"
+    ]
   }
 ];

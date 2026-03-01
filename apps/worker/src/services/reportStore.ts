@@ -14,10 +14,9 @@ export interface PersistInspectionReportInput {
   inspectorId: string | null;
   submittedAt: string;
   summary: {
-    total_items_with_status: number;
-    pass_count: number;
-    fail_count: number;
-    na_count: number;
+    total_items_with_observation: number;
+    text_remark_count: number;
+    audio_remark_count: number;
   };
   overallStatus: "ok" | "needs_attention" | "critical";
   analyzedChecks: number;

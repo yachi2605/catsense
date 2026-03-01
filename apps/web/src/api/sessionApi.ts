@@ -52,7 +52,6 @@ export interface UpsertItemObservationInput {
   baseUrl: string;
   sessionId: string;
   checkId: string;
-  status?: "pass" | "fail" | "na";
   textRemark?: string;
   audioDurationSec?: number;
 }
@@ -61,10 +60,9 @@ export interface SubmitInspectionResponse {
   session_id: string;
   submitted_at: string;
   summary: {
-    total_items_with_status: number;
-    pass_count: number;
-    fail_count: number;
-    na_count: number;
+    total_items_with_observation: number;
+    text_remark_count: number;
+    audio_remark_count: number;
   };
 }
 
@@ -75,6 +73,7 @@ export async function createSession(input: CreateSessionInput): Promise<SessionS
       "content-type": "application/json",
     },
     body: JSON.stringify({
+      serial_number: input.equipmentId,
       equipment_id: input.equipmentId,
       checklist_id: input.checklistId || undefined,
       inspector_id: input.inspectorId || undefined,
@@ -119,9 +118,6 @@ export async function getSession(baseUrl: string, sessionId: string): Promise<un
 
 export async function upsertItemObservation(input: UpsertItemObservationInput): Promise<unknown> {
   const body: Record<string, unknown> = {};
-  if (input.status) {
-    body.status = input.status;
-  }
   if (input.textRemark !== undefined) {
     body.text_remark = input.textRemark;
   }

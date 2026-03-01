@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   analyzeSession,
   createSession,
@@ -97,11 +97,18 @@ const ACTIVE_SECTIONS = SECTIONS.map((section) => ({
   items: section.items.slice(0, DEMO_ITEMS_PER_SECTION),
 }));
 
-const STATUS_OPTIONS = [
-  { value: "pass", label: "Pass", color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0" },
-  { value: "fail", label: "Fail", color: "#dc2626", bg: "#fef2f2", border: "#fecaca" },
-  { value: "na", label: "N/A", color: "#6b7280", bg: "#f9fafb", border: "#e5e7eb" },
-];
+function hasAnyInput(
+  itemId: string,
+  textRemarks: Record<string, string>,
+  audioRemarks: Record<string, { blob: Blob; duration: number }>,
+  photos: Record<string, File[]>,
+): boolean {
+  return Boolean(textRemarks[itemId]?.trim()) || Boolean(audioRemarks[itemId]) || (photos[itemId]?.length ?? 0) > 0;
+}
+
+function isUnknownLike(value: unknown): boolean {
+  return typeof value === "string" && value.trim().toUpperCase() === "UNKNOWN";
+}
 
 /* ═══════════════════════ SVG ICONS ═══════════════════════ */
 const ArrowLeft = () => (
@@ -385,17 +392,15 @@ function MachineSelectPage({ onSelect }: { onSelect: (m: any) => void }) {
 /* ════════════════════════════════════════════════════
    PAGE 2 — SECTION DASHBOARD
    ════════════════════════════════════════════════════ */
-function SectionDashboard({ machine, statuses, onSelectSection, onBack, onSubmit, syncState }: any) {
+function SectionDashboard({ machine, textRemarks, audioRemarks, photos, onSelectSection, onBack, onSubmit, onSaveProgress, syncState }: any) {
   const totalItems = ACTIVE_SECTIONS.reduce((s, sec) => s + sec.items.length, 0);
-  const completedItems = Object.keys(statuses).filter((k) => statuses[k]).length;
-  const failCount = Object.values(statuses).filter((v) => v === "fail").length;
-  const passCount = Object.values(statuses).filter((v) => v === "pass").length;
-  const allDone = completedItems === totalItems;
+  const completedItems = ACTIVE_SECTIONS.flatMap((sec) => sec.items).filter((item: any) =>
+    hasAnyInput(item.id, textRemarks, audioRemarks, photos),
+  ).length;
 
   const getSectionStats = (sec: any) => {
-    const done = sec.items.filter((i: any) => statuses[i.id]).length;
-    const fails = sec.items.filter((i: any) => statuses[i.id] === "fail").length;
-    return { done, total: sec.items.length, fails };
+    const done = sec.items.filter((i: any) => hasAnyInput(i.id, textRemarks, audioRemarks, photos)).length;
+    return { done, total: sec.items.length };
   };
 
   return (
@@ -429,20 +434,7 @@ function SectionDashboard({ machine, statuses, onSelectSection, onBack, onSubmit
                 <span style={{ fontSize: 13, fontWeight: 500, color: "#aaa", marginLeft: 8 }}>items inspected</span>
               </div>
             </div>
-            <div style={{ display: "flex", gap: 12 }}>
-              {passCount > 0 && (
-                <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "6px 14px", display: "flex", alignItems: "center", gap: 5 }}>
-                  <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#16a34a" }} />
-                  <span style={{ fontSize: 13, fontWeight: 700, color: "#16a34a" }}>{passCount}</span>
-                </div>
-              )}
-              {failCount > 0 && (
-                <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "6px 14px", display: "flex", alignItems: "center", gap: 5 }}>
-                  <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#dc2626" }} />
-                  <span style={{ fontSize: 13, fontWeight: 700, color: "#dc2626" }}>{failCount}</span>
-                </div>
-              )}
-            </div>
+            <div />
           </div>
           <ProgressBar value={completedItems} max={totalItems} large />
         </div>
@@ -476,7 +468,6 @@ function SectionDashboard({ machine, statuses, onSelectSection, onBack, onSubmit
                   <p style={{ fontSize: 11, color: "#aaa", margin: "0 0 14px", lineHeight: 1.4 }}>{sec.description}</p>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                     <span style={{ fontSize: 12, fontWeight: 600, color: "#666" }}>{stats.done}/{stats.total}</span>
-                    {stats.fails > 0 && <span style={{ fontSize: 11, color: "#dc2626", fontWeight: 600 }}>{stats.fails} issue{stats.fails > 1 ? "s" : ""}</span>}
                   </div>
                   <ProgressBar value={stats.done} max={stats.total} green={isComplete} />
                   <button style={{
@@ -500,11 +491,11 @@ function SectionDashboard({ machine, statuses, onSelectSection, onBack, onSubmit
       <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#fff", borderTop: "1px solid #e5e7eb", padding: "14px 28px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 90 }}>
         <SyncBadge text={syncState} />
         <div style={{ display: "flex", gap: 10 }}>
-          <button style={{ padding: "9px 20px", borderRadius: 8, border: "1px solid #ddd", background: "#fff", color: "#555", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Save Progress</button>
-          <button onClick={onSubmit} disabled={!allDone} style={{
+          <button onClick={onSaveProgress} style={{ padding: "9px 20px", borderRadius: 8, border: "1px solid #ddd", background: "#fff", color: "#555", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Save Progress</button>
+          <button onClick={onSubmit} style={{
             padding: "9px 28px", borderRadius: 8, border: "none",
-            background: allDone ? "#16a34a" : "#e5e7eb", color: allDone ? "#fff" : "#bbb",
-            fontSize: 13, fontWeight: 700, cursor: allDone ? "pointer" : "not-allowed",
+            background: "#16a34a", color: "#fff",
+            fontSize: 13, fontWeight: 700, cursor: "pointer",
           }}>Submit Inspection</button>
         </div>
       </div>
@@ -515,10 +506,11 @@ function SectionDashboard({ machine, statuses, onSelectSection, onBack, onSubmit
 /* ════════════════════════════════════════════════════
    PAGE 3 — INSPECTION CHECKLIST
    ════════════════════════════════════════════════════ */
-function InspectionChecklist({ sectionKey, statuses, textRemarks, audioRemarks, photos, onUpdateStatus, onUpdateText, onUpdateAudio, onDeleteAudio, onAddPhoto, onBack, syncState }: any) {
+function InspectionChecklist({ sectionKey, textRemarks, audioRemarks, photos, onUpdateText, onUpdateAudio, onDeleteAudio, onAddPhoto, onBack, onSaveProgress, onNextTrack, syncState }: any) {
   const section = ACTIVE_SECTIONS.find((s) => s.key === sectionKey)!;
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
   const [recordingItemId, setRecordingItemId] = useState<string | null>(null);
+  const [photoRequiredItemId, setPhotoRequiredItemId] = useState<string | null>(null);
   const { isRecording, audioBlob, duration, startRecording, stopRecording, clearBlob } = useAudioRecorder();
 
   useEffect(() => {
@@ -529,7 +521,12 @@ function InspectionChecklist({ sectionKey, statuses, textRemarks, audioRemarks, 
     }
   }, [audioBlob, recordingItemId, duration, onUpdateAudio, clearBlob]);
 
-  const stats = { done: section.items.filter((i: any) => statuses[i.id]).length, total: section.items.length };
+  useEffect(() => {
+    setExpandedItem(null);
+    setPhotoRequiredItemId(null);
+  }, [sectionKey]);
+
+  const stats = { done: section.items.filter((i: any) => hasAnyInput(i.id, textRemarks, audioRemarks, photos)).length, total: section.items.length };
 
   return (
     <div style={{ minHeight: "100vh", background: "#f4f5f7" }}>
@@ -559,17 +556,17 @@ function InspectionChecklist({ sectionKey, statuses, textRemarks, audioRemarks, 
         {/* Items */}
         {section.items.map((item: any, idx: number) => {
           const isExpanded = expandedItem === item.id;
-          const status = statuses[item.id];
-          const statusOpt = STATUS_OPTIONS.find((s) => s.value === status);
+          const hasObservation = hasAnyInput(item.id, textRemarks, audioRemarks, photos);
           const hasAudio = Boolean(audioRemarks[item.id]);
           const hasText = Boolean(textRemarks[item.id]);
           const hasPhotos = (photos[item.id] ?? []).length > 0;
+          const needsPhoto = photoRequiredItemId === item.id && !hasPhotos;
           const isItemRecording = isRecording && recordingItemId === item.id;
 
           return (
             <div key={item.id} style={{
               background: "#fff", borderRadius: 14, marginBottom: 8, overflow: "hidden",
-              border: `1px solid ${status === "fail" ? "#fecaca" : status === "pass" ? "#bbf7d0" : "#e8e8e8"}`,
+              border: `1px solid ${hasObservation ? "#bbf7d0" : "#e8e8e8"}`,
               transition: "all 0.2s", boxShadow: isExpanded ? "0 4px 16px rgba(0,0,0,0.05)" : "none",
             }}>
               {/* Collapsed row */}
@@ -578,10 +575,10 @@ function InspectionChecklist({ sectionKey, statuses, textRemarks, audioRemarks, 
                 <div style={{
                   width: 30, height: 30, borderRadius: 8, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: 12, fontWeight: 700,
-                  background: status ? statusOpt?.bg : "#f5f5f5", color: status ? statusOpt?.color : "#ccc",
-                  border: `1.5px solid ${status ? statusOpt?.border : "#e5e5e5"}`,
+                  background: hasObservation ? "#f0fdf4" : "#f5f5f5", color: hasObservation ? "#16a34a" : "#ccc",
+                  border: `1.5px solid ${hasObservation ? "#bbf7d0" : "#e5e5e5"}`,
                 }}>
-                  {status === "pass" ? <CheckSvg size={14} color="#16a34a" /> : status === "fail" ? "✕" : idx + 1}
+                  {hasObservation ? <CheckSvg size={14} color="#16a34a" /> : idx + 1}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 600, color: "#222" }}>{item.name}</div>
@@ -607,27 +604,6 @@ function InspectionChecklist({ sectionKey, statuses, textRemarks, audioRemarks, 
                       <div style={{ fontSize: 10, fontWeight: 700, color: "#92400e", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 2 }}>Look For</div>
                       <div style={{ fontSize: 13, color: "#78350f", lineHeight: 1.5 }}>{item.lookFor}</div>
                     </div>
-                  </div>
-
-                  {/* Status buttons */}
-                  <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-                    {STATUS_OPTIONS.map((opt) => {
-                      const active = status === opt.value;
-                      return (
-                        <button key={opt.value} onClick={(e) => { e.stopPropagation(); onUpdateStatus(item.id, active ? null : opt.value); }}
-                          style={{
-                            flex: 1, padding: "11px 0", borderRadius: 10, fontSize: 13, fontWeight: 700,
-                            cursor: "pointer", transition: "all 0.15s",
-                            display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
-                            border: `2px solid ${active ? opt.color : "#e5e5e5"}`,
-                            background: active ? opt.bg : "#fff",
-                            color: active ? opt.color : "#bbb",
-                          }}>
-                          {active && <CheckSvg size={14} color={opt.color} />}
-                          {opt.label}
-                        </button>
-                      );
-                    })}
                   </div>
 
                   {/* Text remarks */}
@@ -680,14 +656,31 @@ function InspectionChecklist({ sectionKey, statuses, textRemarks, audioRemarks, 
 
                     <label style={{
                       display: "flex", alignItems: "center", gap: 7, padding: "9px 16px", borderRadius: 10,
-                      background: "#fff", border: "1.5px solid #e5e5e5", color: "#555", fontSize: 12, fontWeight: 600,
+                      background: needsPhoto ? "#fef2f2" : "#fff",
+                      border: `1.5px solid ${needsPhoto ? "#dc2626" : "#e5e5e5"}`,
+                      color: needsPhoto ? "#dc2626" : "#555", fontSize: 12, fontWeight: 600,
                       cursor: "pointer", transition: "all 0.15s",
+                      boxShadow: needsPhoto ? "0 0 0 3px rgba(220,38,38,0.15)" : "none",
                     }}
-                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#7c3aed"; e.currentTarget.style.color = "#7c3aed"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#e5e5e5"; e.currentTarget.style.color = "#555"; }}>
+                      onMouseEnter={(e) => {
+                        if (needsPhoto) return;
+                        e.currentTarget.style.borderColor = "#7c3aed";
+                        e.currentTarget.style.color = "#7c3aed";
+                      }}
+                      onMouseLeave={(e) => {
+                        if (needsPhoto) return;
+                        e.currentTarget.style.borderColor = "#e5e5e5";
+                        e.currentTarget.style.color = "#555";
+                      }}>
                       <CameraSvg size={15} /> Add Photo
                       <input type="file" accept="image/*" capture="environment" style={{ display: "none" }}
-                        onChange={(e) => { const f = e.target.files?.[0]; if (f) void onAddPhoto(item.id, f); }} />
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) {
+                            setPhotoRequiredItemId(null);
+                            void onAddPhoto(item.id, f);
+                          }
+                        }} />
                     </label>
                   </div>
 
@@ -710,12 +703,29 @@ function InspectionChecklist({ sectionKey, statuses, textRemarks, audioRemarks, 
                       style={{ padding: "7px 14px", borderRadius: 8, border: "1px solid #e5e5e5", background: "#fff", color: idx === 0 ? "#ddd" : "#555", fontSize: 12, fontWeight: 600, cursor: idx === 0 ? "not-allowed" : "pointer" }}>
                       ← Previous
                     </button>
-                    <button disabled={idx === section.items.length - 1}
-                      onClick={(e) => { e.stopPropagation(); setExpandedItem(section.items[idx + 1].id); }}
-                      style={{ padding: "7px 18px", borderRadius: 8, border: "none", background: idx === section.items.length - 1 ? "#e5e7eb" : "#2563eb", color: idx === section.items.length - 1 ? "#bbb" : "#fff", fontSize: 12, fontWeight: 600, cursor: idx === section.items.length - 1 ? "not-allowed" : "pointer" }}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!hasPhotos) {
+                          setPhotoRequiredItemId(item.id);
+                          return;
+                        }
+                        setPhotoRequiredItemId(null);
+                        if (idx === section.items.length - 1) {
+                          onNextTrack();
+                          return;
+                        }
+                        setExpandedItem(section.items[idx + 1].id);
+                      }}
+                      style={{ padding: "7px 18px", borderRadius: 8, border: "none", background: "#2563eb", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
                       Next →
                     </button>
                   </div>
+                  {needsPhoto && (
+                    <div style={{ marginTop: 8, fontSize: 11, color: "#dc2626", fontWeight: 600 }}>
+                      Add at least one photo to continue to the next item.
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -728,7 +738,7 @@ function InspectionChecklist({ sectionKey, statuses, textRemarks, audioRemarks, 
         <SyncBadge text={syncState} />
         <div style={{ display: "flex", gap: 10 }}>
           <button onClick={onBack} style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid #ddd", background: "#fff", color: "#555", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Back to Sections</button>
-          <button style={{ padding: "9px 20px", borderRadius: 8, border: "none", background: "#2563eb", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Save Progress</button>
+          <button onClick={onSaveProgress} style={{ padding: "9px 20px", borderRadius: 8, border: "none", background: "#2563eb", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Save Progress</button>
         </div>
       </div>
     </div>
@@ -738,11 +748,7 @@ function InspectionChecklist({ sectionKey, statuses, textRemarks, audioRemarks, 
 /* ════════════════════════════════════════════════════
    PAGE 4 — SUBMISSION
    ════════════════════════════════════════════════════ */
-function SubmissionPage({ machine, statuses, textRemarks, photos, submitMeta, analysis, onBack }: any) {
-  const completed = Object.keys(statuses).filter((k) => statuses[k]).length;
-  const pCount = submitMeta?.summary?.pass_count ?? Object.values(statuses).filter((v) => v === "pass").length;
-  const fCount = submitMeta?.summary?.fail_count ?? Object.values(statuses).filter((v) => v === "fail").length;
-  const naCount = submitMeta?.summary?.na_count ?? Object.values(statuses).filter((v) => v === "na").length;
+function SubmissionPage({ machine, textRemarks, photos, submitMeta, analysis, onBack }: any) {
   const aiByCheckId = new Map((analysis?.check_results ?? []).map((result: any) => [result.check_id, result]));
 
   const reportRows = ACTIVE_SECTIONS.flatMap((section) =>
@@ -750,12 +756,11 @@ function SubmissionPage({ machine, statuses, textRemarks, photos, submitMeta, an
       sectionTitle: section.title,
       id: item.id,
       name: item.name,
-      status: statuses[item.id] ?? null,
       remark: textRemarks[item.id] ?? "",
       photos: photos[item.id] ?? [],
       ai: aiByCheckId.get(item.id) ?? null,
     })),
-  ).filter((row) => row.status || row.remark || row.photos.length > 0 || row.ai);
+  ).filter((row) => row.remark || row.photos.length > 0 || row.ai);
 
   return (
     <div style={{ minHeight: "100vh", background: "#f4f5f7", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
@@ -768,10 +773,9 @@ function SubmissionPage({ machine, statuses, textRemarks, photos, submitMeta, an
 
         <div style={{ display: "flex", gap: 14, justifyContent: "center", marginBottom: 24 }}>
           {[
-            { l: "Inspected", v: submitMeta?.summary?.total_items_with_status ?? completed, c: "#2563eb" },
-            { l: "Passed", v: pCount, c: "#16a34a" },
-            { l: "Failed", v: fCount, c: "#dc2626" },
-            { l: "N/A", v: naCount, c: "#6b7280" },
+            { l: "Observed Items", v: submitMeta?.summary?.total_items_with_observation ?? 0, c: "#2563eb" },
+            { l: "Text Notes", v: submitMeta?.summary?.text_remark_count ?? 0, c: "#16a34a" },
+            { l: "Audio Notes", v: submitMeta?.summary?.audio_remark_count ?? 0, c: "#dc2626" },
           ].map((s) => (
             <div key={s.l} style={{ background: "#f9fafb", borderRadius: 12, padding: "12px 16px", minWidth: 65, border: "1px solid #f0f0f0" }}>
               <div style={{ fontSize: 24, fontWeight: 800, color: s.c }}>{s.v}</div>
@@ -803,25 +807,26 @@ function SubmissionPage({ machine, statuses, textRemarks, photos, submitMeta, an
             <div style={{ display: "grid", gap: 12 }}>
               {reportRows.map((row) => (
                 <div key={row.id} style={{ border: "1px solid #e5e7eb", borderRadius: 10, padding: 12, background: "#fafafa" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", marginBottom: 8 }}>
+                  {(() => {
+                    const ai = row.ai?.analysis;
+                    const findings = Array.isArray(ai?.findings) ? ai.findings : [];
+                    const visibleFindings = findings.filter((finding: any) =>
+                      !isUnknownLike(finding?.component) &&
+                      !isUnknownLike(finding?.issue) &&
+                      !isUnknownLike(finding?.evidence) &&
+                      !isUnknownLike(finding?.action),
+                    );
+                    const followUps = Array.isArray(ai?.follow_up_questions)
+                      ? ai.follow_up_questions.filter((question: any) => typeof question === "string" && !isUnknownLike(question))
+                      : [];
+
+                    return (
+                      <>
+                  <div style={{ marginBottom: 8 }}>
                     <div>
                       <div style={{ fontSize: 11, color: "#999", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>{row.sectionTitle}</div>
                       <div style={{ fontSize: 13, color: "#111", fontWeight: 700 }}>{row.name}</div>
                     </div>
-                    {row.status && (
-                      <span style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        textTransform: "uppercase",
-                        padding: "4px 8px",
-                        borderRadius: 8,
-                        background: row.status === "pass" ? "#f0fdf4" : row.status === "fail" ? "#fef2f2" : "#f3f4f6",
-                        color: row.status === "pass" ? "#16a34a" : row.status === "fail" ? "#dc2626" : "#6b7280",
-                        border: `1px solid ${row.status === "pass" ? "#bbf7d0" : row.status === "fail" ? "#fecaca" : "#d1d5db"}`,
-                      }}>
-                        {row.status}
-                      </span>
-                    )}
                   </div>
 
                   {row.remark && (
@@ -837,11 +842,49 @@ function SubmissionPage({ machine, statuses, textRemarks, photos, submitMeta, an
                     </div>
                   )}
 
-                  {row.ai?.analysis?.summary && (
-                    <div style={{ fontSize: 12, color: "#334155", lineHeight: 1.5 }}>
-                      <strong>AI:</strong> {row.ai.analysis.summary}
-                    </div>
-                  )}
+                        {ai?.summary && (
+                          <div style={{ fontSize: 12, color: "#334155", lineHeight: 1.5, marginBottom: 6 }}>
+                            <strong>summary:</strong> {ai.summary}
+                          </div>
+                        )}
+
+                        {ai?.status && (
+                          <div style={{ fontSize: 12, color: "#334155", lineHeight: 1.5 }}>
+                            <strong>status:</strong> {ai.status}
+                          </div>
+                        )}
+
+                        {typeof ai?.confidence === "number" && (
+                          <div style={{ fontSize: 12, color: "#334155", lineHeight: 1.5, marginBottom: 6 }}>
+                            <strong>confidence:</strong> {ai.confidence.toFixed(2)}
+                          </div>
+                        )}
+
+                        {visibleFindings.length > 0 && (
+                          <div style={{ marginBottom: 8 }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: "#666", marginBottom: 6 }}>findings</div>
+                            <div style={{ display: "grid", gap: 6 }}>
+                              {visibleFindings.map((finding: any, findingIndex: number) => (
+                                <div key={`${row.id}-finding-${findingIndex}`} style={{ fontSize: 12, color: "#334155", lineHeight: 1.5, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 10px" }}>
+                                  <div><strong>component:</strong> {finding.component}</div>
+                                  <div><strong>issue:</strong> {finding.issue}</div>
+                                  <div><strong>severity:</strong> {finding.severity}</div>
+                                  <div><strong>evidence:</strong> {finding.evidence}</div>
+                                  <div><strong>action:</strong> {finding.action}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {followUps.length > 0 && (
+                          <div style={{ fontSize: 12, color: "#334155", lineHeight: 1.5 }}>
+                            <strong>follow_up_questions:</strong> {followUps.join(" | ")}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               ))}
             </div>
@@ -866,7 +909,6 @@ export default function SafetyInspectionApp() {
   const [page, setPage] = useState("machines");
   const [selectedMachine, setSelectedMachine] = useState<any>(null);
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
-  const [statuses, setStatuses] = useState<Record<string, string | null>>({});
   const [textRemarks, setTextRemarks] = useState<Record<string, string>>({});
   const [audioRemarks, setAudioRemarks] = useState<Record<string, { blob: Blob; duration: number }>>({});
   const [photos, setPhotos] = useState<Record<string, File[]>>({});
@@ -875,37 +917,9 @@ export default function SafetyInspectionApp() {
   const [submitMeta, setSubmitMeta] = useState<any>(null);
   const [analysis, setAnalysis] = useState<any>(null);
 
-  const totalItems = useMemo(() => ACTIVE_SECTIONS.reduce((s, sec) => s + sec.items.length, 0), []);
-
   const requireSession = useCallback(() => {
     if (!sessionId) throw new Error("Session not initialized");
   }, [sessionId]);
-
-  function maybeAdvanceSection(nextStatuses: Record<string, string | null>, itemId: string, value: string | null, hadStatusBefore: boolean): void {
-    if (page !== "inspection" || !selectedSection) return;
-    if (!value || hadStatusBefore) return;
-
-    const currentSection = ACTIVE_SECTIONS.find((section) => section.key === selectedSection);
-    if (!currentSection) return;
-
-    const touchedCurrentSection = currentSection.items.some((item: any) => item.id === itemId);
-    if (!touchedCurrentSection) return;
-
-    const sectionComplete = currentSection.items.every((item: any) => Boolean(nextStatuses[item.id]));
-    if (!sectionComplete) return;
-
-    const currentIndex = ACTIVE_SECTIONS.findIndex((section) => section.key === currentSection.key);
-    const nextSection = ACTIVE_SECTIONS[currentIndex + 1];
-
-    if (nextSection) {
-      setSelectedSection(nextSection.key);
-      setSyncState(`${currentSection.shortTitle} complete. Moving to ${nextSection.title}...`);
-      return;
-    }
-
-    setPage("dashboard");
-    setSyncState("All sections complete. Ready to submit.");
-  }
 
   // ── API handlers (unchanged) ──
   async function onSelectMachine(machine: any): Promise<void> {
@@ -920,21 +934,6 @@ export default function SafetyInspectionApp() {
       setSyncState(err instanceof Error ? err.message : "Failed to create session");
       // Still navigate so UI works without backend
       setPage("dashboard");
-    }
-  }
-
-  async function onUpdateStatus(itemId: string, value: string | null): Promise<void> {
-    const hadStatusBefore = Boolean(statuses[itemId]);
-    const nextStatuses = { ...statuses, [itemId]: value };
-    setStatuses(nextStatuses);
-    maybeAdvanceSection(nextStatuses, itemId, value, hadStatusBefore);
-    try {
-      requireSession();
-      setSyncState(`Saving ${itemId} status...`);
-      await upsertItemObservation({ baseUrl: WORKER_URL, sessionId, checkId: itemId, status: value ?? undefined });
-      setSyncState(`Saved ${itemId} status`);
-    } catch (err) {
-      setSyncState(err instanceof Error ? err.message : "Failed to save status");
     }
   }
 
@@ -978,8 +977,6 @@ export default function SafetyInspectionApp() {
   }
 
   async function onSubmit(): Promise<void> {
-    const completed = Object.keys(statuses).filter((k) => statuses[k]).length;
-    if (completed < totalItems) { setSyncState("Complete all items before submit"); return; }
     try {
       requireSession();
       setSyncState("Submitting inspection...");
@@ -1004,9 +1001,46 @@ export default function SafetyInspectionApp() {
     setAudioRemarks((p) => { const c = { ...p }; delete c[itemId]; return c; });
   }
 
+  function onNextTrack(): void {
+    if (!selectedSection) {
+      setPage("dashboard");
+      return;
+    }
+
+    const currentIndex = ACTIVE_SECTIONS.findIndex((section) => section.key === selectedSection);
+    const nextSection = ACTIVE_SECTIONS[currentIndex + 1];
+    if (nextSection) {
+      setSelectedSection(nextSection.key);
+      setSyncState(`Moving to ${nextSection.title}...`);
+      return;
+    }
+
+    setPage("dashboard");
+    setSyncState("Section complete. Returning to sections.");
+  }
+
+  async function onSaveProgress(): Promise<void> {
+    try {
+      if (sessionId) {
+        setSyncState("Saving progress...");
+        const pendingNotes = Object.entries(textRemarks).filter(([, value]) => Boolean(value?.trim()));
+        await Promise.all(
+          pendingNotes.map(([checkId, textRemark]) =>
+            upsertItemObservation({ baseUrl: WORKER_URL, sessionId, checkId, textRemark }),
+          ),
+        );
+        setSyncState("Progress saved");
+      }
+    } catch (err) {
+      setSyncState(err instanceof Error ? err.message : "Failed to save progress");
+    } finally {
+      resetAll();
+    }
+  }
+
   function resetAll(): void {
     setPage("machines"); setSelectedMachine(null); setSelectedSection(null);
-    setStatuses({}); setTextRemarks({}); setAudioRemarks({}); setPhotos({});
+    setTextRemarks({}); setAudioRemarks({}); setPhotos({});
     setSessionId(""); setSubmitMeta(null); setAnalysis(null); setSyncState("Not connected");
   }
 
@@ -1014,18 +1048,18 @@ export default function SafetyInspectionApp() {
     <>
       {page === "machines" && <MachineSelectPage onSelect={onSelectMachine} />}
       {page === "dashboard" && (
-        <SectionDashboard machine={selectedMachine} statuses={statuses}
+        <SectionDashboard machine={selectedMachine} textRemarks={textRemarks} audioRemarks={audioRemarks} photos={photos}
           onSelectSection={(key: string) => { setSelectedSection(key); setPage("inspection"); }}
-          onBack={resetAll} onSubmit={onSubmit} syncState={syncState} />
+          onBack={resetAll} onSubmit={onSubmit} onSaveProgress={onSaveProgress} syncState={syncState} />
       )}
       {page === "inspection" && (
-        <InspectionChecklist sectionKey={selectedSection} statuses={statuses} textRemarks={textRemarks}
-          audioRemarks={audioRemarks} photos={photos} onUpdateStatus={onUpdateStatus} onUpdateText={onUpdateText}
+        <InspectionChecklist sectionKey={selectedSection} textRemarks={textRemarks}
+          audioRemarks={audioRemarks} photos={photos} onUpdateText={onUpdateText}
           onUpdateAudio={onUpdateAudio} onDeleteAudio={onDeleteAudio} onAddPhoto={onAddPhoto}
-          onBack={() => setPage("dashboard")} syncState={syncState} />
+          onBack={() => setPage("dashboard")} onSaveProgress={onSaveProgress} onNextTrack={onNextTrack} syncState={syncState} />
       )}
       {page === "submitted" && (
-        <SubmissionPage machine={selectedMachine} statuses={statuses} textRemarks={textRemarks} photos={photos} submitMeta={submitMeta} analysis={analysis} onBack={resetAll} />
+        <SubmissionPage machine={selectedMachine} textRemarks={textRemarks} photos={photos} submitMeta={submitMeta} analysis={analysis} onBack={resetAll} />
       )}
     </>
   );

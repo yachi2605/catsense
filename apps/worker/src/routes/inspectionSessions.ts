@@ -1,7 +1,8 @@
 import { queryActianManualExcerpts } from "../services/actian";
 import { runGeminiInspection } from "../services/gemini";
 import { persistInspectionReport } from "../services/reportStore";
-import { buildInspectPrompt } from "../prompts/inspectPrompt";
+import { buildStructuredInspectionPrompt } from "../modelling/evidencePrompt";
+import { normalizeMachineSerial, STATIC_MACHINE_SERIALS, STATIC_MACHINE_SERIAL_SET } from "../constants/machines";
 import { getRequiredFile, getRequiredString } from "../utils/formData";
 
 interface Env {
@@ -37,10 +38,7 @@ interface SessionEvidence {
   created_at: string;
 }
 
-type ItemStatus = "pass" | "fail" | "na";
-
 interface InspectionCheckObservation {
-  status?: ItemStatus;
   text_remark?: string;
   audio_duration_sec?: number;
   updated_at: string;
@@ -55,10 +53,17 @@ const ALLOWED_AUDIO_TYPES = new Set(["audio/wav", "audio/x-wav", "audio/mpeg", "
 
 export async function handleCreateInspectionSession(request: Request, env: Env): Promise<Response> {
   const payload = (await request.json()) as JsonObject;
-  const equipmentId = valueAsString(payload.equipment_id);
+  const rawMachineSerial = valueAsString(payload.serial_number) ?? valueAsString(payload.equipment_id);
+  const equipmentId = rawMachineSerial ? normalizeMachineSerial(rawMachineSerial) : null;
 
   if (!equipmentId) {
-    throw new Error("Missing required field: equipment_id");
+    throw new Error("Missing required field: serial_number");
+  }
+
+  if (!STATIC_MACHINE_SERIAL_SET.has(equipmentId)) {
+    throw new Error(
+      `Invalid serial_number. Use one of: ${STATIC_MACHINE_SERIALS.join(", ")}`,
+    );
   }
 
   const now = new Date().toISOString();
@@ -169,17 +174,15 @@ export async function handleUpsertInspectionItemObservation(
   }
 
   const payload = (await request.json()) as JsonObject;
-  const status = valueAsStatus(payload.status);
   const textRemark = valueAsString(payload.text_remark) ?? undefined;
   const audioDuration = valueAsNumber(payload.audio_duration_sec);
 
-  if (!status && !textRemark && audioDuration === null) {
+  if (!textRemark && audioDuration === null) {
     throw new Error("Missing required field: observation payload");
   }
 
   const previous = session.observations[checkId];
   const observation: InspectionCheckObservation = {
-    status: status ?? previous?.status,
     text_remark: textRemark ?? previous?.text_remark,
     audio_duration_sec: audioDuration ?? previous?.audio_duration_sec,
     updated_at: new Date().toISOString(),
@@ -260,18 +263,12 @@ export async function handleAnalyzeInspectionSession(_request: Request, env: Env
       continue;
     }
 
-    const prompt = [
-      buildInspectPrompt({
-        equipmentId: session.equipment_id,
-        manualExcerpts,
-      }),
-      "",
-      `Checklist check_id: ${checkId}`,
-      `Inspector selected status: ${observation?.status ?? "not_provided"}`,
-      `Inspector text remarks: ${observation?.text_remark ?? "none"}`,
-      `Audio duration (seconds): ${observation?.audio_duration_sec ?? "unknown"}`,
-      "Focus only on this check's evidence.",
-    ].join("\n");
+    const prompt = buildStructuredInspectionPrompt({
+      checkId,
+      manualExcerpts,
+      textRemark: observation?.text_remark,
+      audioDurationSec: observation?.audio_duration_sec,
+    });
 
     const analysis = await runGeminiInspection({
       config: {
@@ -378,7 +375,7 @@ export async function handleSubmitInspectionSession(_request: Request, env: Env,
   };
   await saveSession(env.UPLOADS, updatedSession);
 
-  const summary = summarizeObservationStatuses(session.observations);
+  const summary = summarizeObservations(session);
   const persisted = await persistReportSnapshot(env, updatedSession, {
     session_id: updatedSession.session_id,
     equipment_id: updatedSession.equipment_id,
@@ -414,28 +411,25 @@ function deriveOverallStatus(statuses: Array<"ok" | "needs_attention" | "critica
 }
 
 function deriveOverallStatusFromObservations(
-  observations: Record<string, InspectionCheckObservation>,
+  _observations: Record<string, InspectionCheckObservation>,
 ): "ok" | "needs_attention" | "critical" {
-  if (summarizeObservationStatuses(observations).fail_count > 0) {
-    return "needs_attention";
-  }
-
   return "ok";
 }
 
-function summarizeObservationStatuses(observations: Record<string, InspectionCheckObservation>): {
-  total_items_with_status: number;
-  pass_count: number;
-  fail_count: number;
-  na_count: number;
+function summarizeObservations(session: InspectionSession): {
+  total_items_with_observation: number;
+  text_remark_count: number;
+  audio_remark_count: number;
 } {
-  const statuses = Object.values(observations).map((item) => item.status).filter(Boolean) as ItemStatus[];
+  const observationEntries = Object.values(session.observations);
+  const checkIdsWithEvidence = new Set(session.evidence.map((item) => item.check_id));
+  const checkIdsWithObservation = new Set(Object.keys(session.observations));
+  const observedCheckIds = new Set<string>([...checkIdsWithEvidence, ...checkIdsWithObservation]);
 
   return {
-    total_items_with_status: statuses.length,
-    pass_count: statuses.filter((value) => value === "pass").length,
-    fail_count: statuses.filter((value) => value === "fail").length,
-    na_count: statuses.filter((value) => value === "na").length,
+    total_items_with_observation: observedCheckIds.size,
+    text_remark_count: observationEntries.filter((item) => Boolean(item.text_remark)).length,
+    audio_remark_count: observationEntries.filter((item) => typeof item.audio_duration_sec === "number").length,
   };
 }
 
@@ -502,7 +496,7 @@ async function persistReportSnapshot(
       checklistId: reportPayload.checklist_id,
       inspectorId: session.inspector_id ?? null,
       submittedAt: session.submitted_at ?? new Date().toISOString(),
-      summary: summarizeObservationStatuses(session.observations),
+      summary: summarizeObservations(session),
       overallStatus: reportPayload.overall_status,
       analyzedChecks: reportPayload.analyzed_checks,
       evidenceCount: reportPayload.evidence_count,
@@ -541,11 +535,10 @@ function buildPersistedReportSnapshot(
     created_at: string;
     submitted_at: string | null;
   };
-  summary: ReturnType<typeof summarizeObservationStatuses>;
+  summary: ReturnType<typeof summarizeObservations>;
   analysis: typeof reportPayload;
   checks: Array<{
     check_id: string;
-    status: ItemStatus | null;
     text_remark: string | null;
     audio_duration_sec: number | null;
     evidence: SessionEvidence[];
@@ -560,7 +553,6 @@ function buildPersistedReportSnapshot(
 
     return {
       check_id: checkId,
-      status: observation?.status ?? null,
       text_remark: observation?.text_remark ?? null,
       audio_duration_sec: observation?.audio_duration_sec ?? null,
       evidence,
@@ -578,7 +570,7 @@ function buildPersistedReportSnapshot(
       created_at: session.created_at,
       submitted_at: session.submitted_at ?? null,
     },
-    summary: summarizeObservationStatuses(session.observations),
+    summary: summarizeObservations(session),
     analysis: reportPayload,
     checks,
   };
@@ -714,14 +706,6 @@ function valueAsString(value: unknown): string | null {
 
   const normalized = value.trim();
   return normalized.length ? normalized : null;
-}
-
-function valueAsStatus(value: unknown): ItemStatus | null {
-  if (value === "pass" || value === "fail" || value === "na") {
-    return value;
-  }
-
-  return null;
 }
 
 function valueAsNumber(value: unknown): number | null {
