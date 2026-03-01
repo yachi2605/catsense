@@ -1,0 +1,10 @@
+Hydraulic Fluid Tank Inspection Guide
+
+1. Verify fluid level is between MIN and MAX marks.
+2. Inspect tank cap seal for cracks or looseness.
+3. Listen for high-pitched whine near pump inlet; this may indicate cavitation.
+4. Check suction line for air leaks, abrasion, or kinks.
+5. Confirm return filter differential pressure is within service limits.
+6. Inspect hoses and fittings for seepage around crimps and joints.
+7. If fluid appears milky, test for water contamination and replace fluid.
+8. After maintenance, run system for 2 minutes and re-check level and leaks.
