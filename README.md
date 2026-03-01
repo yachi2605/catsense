@@ -50,7 +50,7 @@
 
 A real-time, multimodal AI inspection co-pilot for Caterpillar heavy equipment, combining vision, audio, and manual-grounded reasoning to produce structured safety reports in seconds.
 
-### 🧠 Inspiration
+### Inspiration
 
 Heavy equipment inspections on a job site are the last line of defense before an operator puts a 20-ton machine into service. A missed crack on a hydraulic cylinder, an overlooked fluid leak, or a faulty warning device can result in catastrophic equipment failure — or worse, human injury.
 
@@ -58,7 +58,7 @@ Caterpillar's pre-shift inspection process is rigorous: dozens of checklist item
 
 We built CatSense to change that. The idea: give every field inspector a multimodal AI co-pilot that knows the equipment manual, understands what "wear on a bucket tooth" looks like in a photograph, can hear context in an audio note, and produces a structured, auditable safety report — automatically.
 
-### ❗ The Problem
+### The Problem
 
 Manual equipment inspection suffers from three systemic failures:
 
@@ -68,7 +68,7 @@ Manual equipment inspection suffers from three systemic failures:
 
 **No contextual grounding.** An inspector sees a fluid stain. Without the manual in hand, they don't know if that stain is expected seepage, a "monitor" condition, or an immediate shutdown criterion. CatSense closes that gap in real time.
 
-### 💡 Our Solution
+### Our Solution
 
 CatSense is a full-stack multimodal inspection platform. An inspector selects a registered machine, walks through a structured checklist organized by inspection zone (Ground, Engine, Cab), and for each checklist item they can:
 - Photograph the component directly from their phone camera
